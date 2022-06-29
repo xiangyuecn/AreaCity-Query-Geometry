@@ -39,11 +39,12 @@ public class Test_HttpApiServer {
 	static public boolean Create(String bindIP, int bindPort) {
 		Desc="========== 本地轻量HTTP API服务 ==========";
 		Desc+="\n可通过 http://127.0.0.1:"+bindPort+" 访问本服务，提供的接口：";
-		Desc+="\n\n  - GET /queryPoint?lng=&lat=&returnWKTKey=      查询出包含此坐标点的所有边界图形的属性数据；lng必填经度，lat必填纬度，returnWKTKey可选要返回边界的wkt数据放到此key下。";
-		Desc+="\n\n  - GET /queryGeometry?wkt=&returnWKTKey=        查询出和此图形（点、线、面）有交点的所有边界图形的属性数据（包括边界相交）；wkt必填任意图形，returnWKTKey可选要返回边界的wkt数据放到此key下。";
-		Desc+="\n\n  - GET /readWKT?id=&pid=&extPath=&returnWKTKey= 读取边界图形的WKT数据；前三个参数可以组合查询或查一个参数，id：查询指定id的边界；pid：查询此pid下的所有边界；extPath：查询ext_path完全相同值的边界，首尾支持*通配符（如：*武汉*）；returnWKTKey回边界的wkt数据放到此key下，默认值polygon_wkt；注意：默认只允许输出最大20M的WKT数据，请参考下面的注意事项。";
-		Desc+="\n\n  - JSON响应：{c:0, v:{...}, m:\"错误消息\"} c=0代表接口调用成功，v为内容；c=其他值调用错误，m为错误原因。";
-		Desc+="\n\n  - 注意：如果要输出大量WKT数据，请调大Java内存，不然可能是 -Xmx300m 只允许使用小内存，并且修改服务源码内的AllowResponseBigWKT=true，否则只允许输出最大20M的WKT数据。";
+		Desc+="\n\n  - GET /queryPoint?lng=&lat=&returnWKTKey=      查询出包含此坐标点的所有边界图形的属性数据；lng必填经度，lat必填纬度，returnWKTKey可选要额外返回边界的wkt文本数据放到此key下。";
+		Desc+="\n\n  - GET /queryGeometry?wkt=&returnWKTKey=        查询出和此图形（点、线、面）有交点的所有边界图形的属性数据（包括边界相交）；wkt必填任意图形，returnWKTKey可选要额外返回边界的wkt文本数据放到此key下。";
+		Desc+="\n\n  - GET /readWKT?id=&pid=&deep=&extPath=&returnWKTKey= 读取边界图形的WKT文本数据；前四个参数可以组合查询或查一个参数（边界的属性中必须要有这些字段才能查询出来），id：查询指定id|unique_id的边界；pid：查询此pid下的所有边界；deep：限制只返回特定层级的数据，取值：0省1市2区想3乡镇；extPath：查询和ext_path完全相同值的边界，首尾支持*通配符（如：*武汉*）；returnWKTKey回边界的wkt文本数据放到此key下，默认值polygon_wkt，填0不返回wkt文本数据；注意：默认只允许输出最大20M的WKT数据，请参考下面的注意事项。";
+		Desc+="\n\n  - GET /debugReadGeometryGridSplitsWKT?id=&pid=&deep=&extPath=&returnWKTKey= Debug读取边界网格划分图形WKT文本数据；参数和/readWKT接口一致。";
+		Desc+="\n\n  - JSON响应：{c:0, v:{...}, m:\"错误消息\"} c=0代表接口调用成功，v为内容；c=其他值调用错误，m为错误消息。";
+		Desc+="\n\n  - 注意：如果要输出大量WKT数据，请调大Java内存，不然可能是 -Xmx300m 启动的只允许使用小内存，并且修改服务源码内的AllowResponseBigWKT=true，否则只允许输出最大20M的WKT数据。";
 		
 		System.out.println(Desc);
 		System.out.println();
@@ -122,17 +123,21 @@ public class Test_HttpApiServer {
 		response[0]=ResToJSON(res);
 	}
 	
-	static private void Req_readWKT(HashMap<String, String> query, String[] response, String[] responseErr, int[] status, String[] contentType, HashMap<String, String> respHeader) throws Exception {
-		long id=ToLong(query.get("id"), 0);
-		long pid=ToLong(query.get("pid"), 0);
+	static private void Req_readWKT(boolean debugReadGrid, HashMap<String, String> query, String[] response, String[] responseErr, int[] status, String[] contentType, HashMap<String, String> respHeader) throws Exception {
+		long id=ToLong(query.get("id"), -1);
+		long pid=ToLong(query.get("pid"), -1);
+		long deep=ToLong(query.get("deep"), -1);
 		String extPath=query.get("extPath"); if(extPath==null) extPath="";
 		String returnWKTKey=query.get("returnWKTKey");
-		if(id==0 && pid==0 && extPath.length()==0) {
+		if(id==-1 && pid==-1 && deep==-1 && extPath.length()==0) {
 			responseErr[0]="请求参数无效";
 			return;
 		}
 		if(returnWKTKey==null || returnWKTKey.length()==0) {
 			returnWKTKey="polygon_wkt";
+		}
+		if("0".equals(returnWKTKey)) {
+			returnWKTKey=null;
 		}
 		
 		String exp=extPath;
@@ -158,17 +163,22 @@ public class Test_HttpApiServer {
 		int[] readCount=new int[] {0};
 		boolean[] isWktSizeErr=new boolean[] {false};
 		int[] wktSize=new int[] {0};
-		QueryResult res=AreaCityQuery.ReadWKT_FromWkbsFile(returnWKTKey, null, new Func<String, Boolean>() {
+		Func<String, Boolean> where=new Func<String, Boolean>() {
 			@Override
 			public Boolean Exec(String prop) throws Exception {
 				String prop2=(","+prop.substring(1, prop.length()-1)+",").replace("\"", "").replace(" ", ""); //不解析json，简单处理
-				if(id!=0) {
-					if(!prop2.contains(",id:"+id+",")) {
+				if(id!=-1) {
+					if(!prop2.contains(",id:"+id+",") && !prop2.contains(",unique_id:"+id+",")) {
 						return false;
 					}
 				}
-				if(pid!=0) {
+				if(pid!=-1) {
 					if(!prop2.contains(",pid:"+pid+",")) {
+						return false;
+					}
+				}
+				if(deep!=-1) {
+					if(!prop2.contains(",deep:"+deep+",")) {
 						return false;
 					}
 				}
@@ -188,7 +198,8 @@ public class Test_HttpApiServer {
 				}
 				return true;
 			}
-		}, new Func<String[], Boolean>() {
+		};
+		Func<String[], Boolean> onFind=new Func<String[], Boolean>() {
 			@Override
 			public Boolean Exec(String[] val) throws Exception {
 				wktSize[0]+=val[1].length();
@@ -198,7 +209,13 @@ public class Test_HttpApiServer {
 				}
 				return true;
 			}
-		});
+		};
+		QueryResult res;
+		if(debugReadGrid) {
+			res=AreaCityQuery.Debug_ReadGeometryGridSplitsWKT(returnWKTKey, null, where, onFind);
+		} else {
+			res=AreaCityQuery.ReadWKT_FromWkbsFile(returnWKTKey, null, where, onFind);
+		}
 		
 		if(isWktSizeErr[0]) {
 			responseErr[0]="已匹配到"+readCount[0]+"条数据，但WKT数据量超过20M限制，可修改服务源码内的AllowResponseBigWKT=true来解除限制";
@@ -216,6 +233,7 @@ public class Test_HttpApiServer {
 		for(int i=0,L=res.Result.size();i<L;i++) {
 			if(i>0) json.append(","); 
 			json.append(res.Result.get(i));
+			res.Result.set(i, null);//已读取了结果就释放掉内存
 		}
 		json.append("]}");
 		return json.toString();
@@ -277,12 +295,9 @@ public class Test_HttpApiServer {
 				httpServer.stop(0);
 			}catch(Exception e) {}
 		}
-		
-		// https://www.apiref.com/java11-zh/jdk.httpserver/com/sun/net/httpserver/HttpServer.html
-		httpServer = HttpServer.create(new InetSocketAddress(bindIP, bindPort), 0);
-		httpServer.createContext("/", new HttpHandler() {
+		Func<HttpExchange, Object> fn=new Func<HttpExchange, Object>() {
 			@Override
-			public void handle(HttpExchange context) throws IOException {
+			public Object Exec(HttpExchange context) throws Exception {
 				URI url=context.getRequestURI();
 				String path=url.getPath(); if(path==null||path.length()==0)path="/";
 				String queryStr=url.getQuery(); if(queryStr==null) queryStr="";
@@ -313,7 +328,9 @@ public class Test_HttpApiServer {
 					} else if (path.equals("/queryGeometry")) {
 						Req_queryGeometry(query, response, responseErr, status, contentType, respHeader);
 					} else if (path.equals("/readWKT")) {
-						Req_readWKT(query, response, responseErr, status, contentType, respHeader);
+						Req_readWKT(false, query, response, responseErr, status, contentType, respHeader);
+					} else if (path.equals("/debugReadGeometryGridSplitsWKT")) {
+						Req_readWKT(true, query, response, responseErr, status, contentType, respHeader);
 					} else if (path.equals("/")) {
 						isApi=false;
 						contentType[0]="text/html; charset=utf-8";
@@ -324,8 +341,11 @@ public class Test_HttpApiServer {
 						contentType[0]="text/html; charset=utf-8";
 						response[0]="<h1>请求路径 "+path+" 不存在！</h1>";
 					}
-				} catch (Exception e) {
-					status[0]=500;
+				} catch (Throwable e) {
+					e.printStackTrace();
+					if(e instanceof OutOfMemoryError) {
+						System.gc();
+					}
 					responseErr[0]="接口调用异常："+e.getMessage();
 				}
 				
@@ -347,7 +367,6 @@ public class Test_HttpApiServer {
 				byte[] sendData=response[0].getBytes("utf-8");
 				context.sendResponseHeaders(status[0], sendData.length);
 				context.getResponseBody().write(sendData);
-				context.close();
 				
 				
 				StringBuilder log=new StringBuilder();
@@ -360,6 +379,25 @@ public class Test_HttpApiServer {
 				}
 				log.append(" "+sendData.length);
 				System.out.println(log);
+				
+				return null;
+			}
+		};
+		
+		// https://www.apiref.com/java11-zh/jdk.httpserver/com/sun/net/httpserver/HttpServer.html
+		httpServer = HttpServer.create(new InetSocketAddress(bindIP, bindPort), 0);
+		httpServer.createContext("/", new HttpHandler() {
+			@Override
+			public void handle(HttpExchange context) throws IOException {
+				try {
+					fn.Exec(context);
+				} catch (Throwable e) {
+					e.printStackTrace();
+					if(e instanceof OutOfMemoryError) {
+						System.gc();
+					}
+				}
+				context.close();
 			}
 		});
 		httpServer.start();

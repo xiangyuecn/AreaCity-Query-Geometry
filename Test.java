@@ -563,7 +563,7 @@ public class Test {
 			@Override
 			public Object Exec(ExtPathExpInArgs args) throws Exception {
 				int[] count=new int[] { 0 };
-				AreaCityQuery.Debug_ReadGeometryGridSplitsWKT(new Func<String, Boolean>() {
+				AreaCityQuery.Debug_ReadGeometryGridSplitsWKT("", null, new Func<String, Boolean>() {
 					@Override
 					public Boolean Exec(String prop) throws Exception {
 						return ExtPathMatch(prop, args.extPath_exp);

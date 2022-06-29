@@ -1,10 +1,23 @@
 **【[源GitHub仓库](https://github.com/xiangyuecn/AreaCity-Query-Geometry)】 | 【[Gitee镜像库](https://gitee.com/xiangyuecn/AreaCity-Query-Geometry)】如果本文档图片没有显示，请手动切换到Gitee镜像库阅读文档。**
 
-# :open_book:AreaCity-Query-Geometry的帮助文档
+# :open_book:AreaCity-Query-Geometry坐标边界查询工具
 
-本项目核心功能：使用`jts库`从`省市区县乡镇边界数据`（[AreaCity-JsSpider-StatsGov开源库](https://github.com/xiangyuecn/AreaCity-JsSpider-StatsGov)）或`geojson边界数据`文件中查找出和任意点、线、面有相交的矢量边界，内存占用低，性能优良。
+**本工具核心功能：使用`jts库`从`省市区县乡镇边界数据`（[AreaCity-JsSpider-StatsGov开源库](https://github.com/xiangyuecn/AreaCity-JsSpider-StatsGov)）或`geojson边界数据`文件中查找出和任意点、线、面有相交的矢量边界，内存占用低，性能优良。**
 
-你可以只copy `AreaCityQuery.java` 文件到你的项目中使用（建好package目录或者修改一下package），项目中引入`jts库`，就能使用 `AreaCityQuery` 中的所有查找功能了。也可以clone整个项目代码双击 `编译和运行Test.java直接测试.bat` 即可直接测试（提供了HTTP API服务）。
+- 查询一个坐标点对应的城市信息；
+- 查询一条路径经过的所有城市；
+- 查询一个矢量范围覆盖的所有城市；
+- 查询一个城市或下一级所有边界数据（WKT格式）；
+- 支持通过HTTP API服务进行查询调用；
+- 支持通过Java代码进行查询调用；
+- 源码简单，包括测试bat脚本共5个文件，无需IDE即可修改和运行，copy即用。
+
+
+[​](?)
+
+你可以只copy `AreaCityQuery.java` 文件到你的项目中使用（建好package目录或者修改一下package），项目中引入`jts库`，就能使用 `AreaCityQuery` 中的所有查找功能了。也可以clone整个项目代码双击 `编译和运行Test.java直接测试.bat` 即可直接运行测试。
+
+**API和图形界面**：本工具已自带了一个HTTP API服务，运行测试然后通过菜单启动此服务，然后就可以直接在浏览器上访问这些接口；此API接口可以直接在 [ECharts Map四级下钻在线测试和预览](https://xiangyuecn.gitee.io/areacity-jsspider-statsgov/assets/geo-echarts.html) 页面的`自定义数据源`中进行调用测试，页面会立即绘制查询出来的边界图形。
 
 [​](?)
 
@@ -120,6 +133,8 @@ declare @t datetime = getdate(); declare @val varchar; declare @i int =0; while 
 5. 在需要的地方直接调用http地址接口，得到json响应结果；
 6. 如需外网访问，可以直接暴露端口，或使用Nginx之类的反代此http端口（通过Nginx提供https访问）。
 
+此HTTP API接口可以直接在 [ECharts Map四级下钻在线测试和预览](https://xiangyuecn.gitee.io/areacity-jsspider-statsgov/assets/geo-echarts.html) 页面的`自定义数据源`中进行调用测试，页面会立即绘制查询出来的边界图形。
+
 
 [​](?)
 
@@ -132,10 +147,10 @@ AreaCityQuery.Init_StoreInWkbsFile("geojson文件路径", "geojson文件路径.w
 
 //AreaCityQuery.OnInitProgress=(initInfo)->{ ... } //初始化过程中的回调，可以绑定一个函数，接收初始化进度信息
 
-//查询包含一个坐标点的所有边界图形的属性数据
+//查询包含一个坐标点的所有边界图形的属性数据，可通过res参数让查询额外返回wkt格式边界数据
 QueryResult res1=AreaCityQuery.QueryPoint(114.044346, 22.691963, null, null);
 
-//查询和一个图形（点、线、面）有交点的所有边界图形的属性数据
+//查询和一个图形（点、线、面）有交点的所有边界图形的属性数据，可通过res参数让查询额外返回wkt格式边界数据
 Geometry geom=new WKTReader(AreaCityQuery.Factory).read("LINESTRING(114.233963 30.546038, 114.468109 30.544264)");
 QueryResult res2=AreaCityQuery.QueryGeometry(geom, null, null);
 
@@ -174,6 +189,10 @@ System.out.println(res1+"\n"+res2+"\n"+res3);
 
 ![控制台运行](images/use-console.png)
 
+HTTP API图形界面：
+
+![HTTP API图形界面](images/use-map-echarts.png)
+
 HTTP API调用查询：
 
 ![HTTP API调用查询](images/use-http-api.png)
@@ -189,7 +208,7 @@ HTTP API调用查询：
 
 # :open_book:知识库
 
-本库的代码 *.java 文件全部被丢到根目录，没有创建包名目录，源码直接根目录裸奔，简单粗暴；这样的项目结构肉眼看去也算是简洁，也方便copy文件使用。
+本工具的代码 *.java 文件全部被丢到根目录，没有创建包名目录，源码直接根目录裸奔，简单粗暴；这样的项目结构肉眼看去也算是简洁，也方便copy文件使用。
 
 编写本查询工具代码的原因是数据库查询坐标点对应的城市速度太慢了，影响数据库运行；群里有用户提到过用未知开源库可达到1ms查询一次坐标点，所以开始了本次探索历程。
 

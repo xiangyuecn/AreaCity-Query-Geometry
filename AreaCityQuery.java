@@ -68,7 +68,7 @@ public class AreaCityQuery {
 	 * @param lng 进度坐标值
 	 * @param lat 纬度坐标值
 	 * @param where 可以为null，可选提供一个函数，筛选属性数据（此数据已经过初步筛选），会传入属性的json字符串，如果需要去精确计算这个边界图形是否匹配就返回true，否则返回false跳过这条边界图形的精确计算
-	 * @param res 可以为null，如果提供结果对象，可通过此对象的Set_XXX属性控制某些查询行为，并且本次查询的结果和统计数据将累加到这个结果内（性能测试用）。注意：此结果对象非线程安全
+	 * @param res 可以为null，如果提供结果对象，可通过此对象的Set_XXX属性控制某些查询行为，比如设置Set_ReturnWKTKey可以额外返回边界的WKT文本数据；并且本次查询的结果和统计数据将累加到这个结果内（性能测试用）。注意：此结果对象非线程安全
 	 */
 	static public QueryResult QueryPoint(double lng, double lat, Func<String,Boolean> where, QueryResult res) throws Exception{
 		return QueryGeometry(Factory.createPoint(new Coordinate(lng, lat)), where, res);
@@ -82,7 +82,7 @@ public class AreaCityQuery {
 	 * 
 	 * @param geom 任意格式的图形对象（点、线、面），可以通过wkt文本进行构造：geom=new WKTReader(AreaCityQuery.Factory).read("wkt字符串")
 	 * @param where 可以为null，可选提供一个函数，筛选属性数据（此数据已经过初步筛选），会传入属性的json字符串，如果需要去精确计算这个边界图形是否匹配就返回true，否则返回false跳过这条边界图形的精确计算
-	 * @param res 可以为null，如果提供结果对象，可通过此对象的Set_XXX属性控制某些查询行为，并且本次查询的结果和统计数据将累加到这个结果内（性能测试用）。注意：此结果对象非线程安全
+	 * @param res 可以为null，如果提供结果对象，可通过此对象的Set_XXX属性控制某些查询行为，比如设置Set_ReturnWKTKey可以额外返回边界的WKT文本数据；并且本次查询的结果和统计数据将累加到这个结果内（性能测试用）。注意：此结果对象非线程安全
 	 */
 	static public QueryResult QueryGeometry(Geometry geom, Func<String,Boolean> where, QueryResult res) throws Exception{
 		if(GetInitStatus()==3) {
@@ -110,78 +110,78 @@ public class AreaCityQuery {
 		//进行精确查找
 		String matchLines=",";
 		for(int i=0,len=list.size();i<len;i++) {
-            @SuppressWarnings("unchecked")
+			@SuppressWarnings("unchecked")
 			Map<String, Object> store=(Map<String, Object>)list.get(i);
 
-            byte[] wkbSub=null,wkbFull=null;
-        	String[] wkbPos=getWkbPos(store);
-        	String lineNo=wkbPos[0];
-        	int fullPos=Integer.parseInt(wkbPos[1]);
-        	int subPos=Integer.parseInt(wkbPos[2]);
-        	
-        	//如果wkb对应的这条数据已经有一个sub匹配了，就不需要在继续查询
-        	if(matchLines.indexOf(","+lineNo+",")!=-1) {
-        		continue;
-        	}
-        	
-        	//提供了where筛选
-            if(where!=null) {
-            	if(!where.Exec(getProp(store))) {
-            		continue;
-            	}
-            }
-            
-            //读取wkb数据
-        	long t_IO=System.nanoTime();
-        	Geometry subGeom=null;
-            if(ReadFromMemory) {
-            	//从内存中得到wkb数据 或 直接存的对象
-            	if(SetInitStoreInMemoryUseObject) {
-            		subGeom=(Geometry)store.get("wkb");
-            	} else {
-            		wkbSub=(byte[])store.get("wkb");
-            	}
-            } else {
-            	wkbSub=ReadWkbFromFile(subPos);
-            }
-        	if(returnWkt) {
-        		wkbFull=ReadWkbFromFile(fullPos);
-        	}
-        	res.DurationN_IO+=System.nanoTime()-t_IO;
-            
-            //转换回图形
-            long t_GeometryParse=System.nanoTime();
-            if(subGeom==null) {
-            	subGeom=new WKBReader(Factory).read(wkbSub);
-            }
-            res.DurationN_GeometryParse+=System.nanoTime()-t_GeometryParse;
-            
-            //是否精确匹配
-    		long t_Exact=System.nanoTime();
-    		boolean isMatch=subGeom.intersects(geom);
-    		res.DurationN_ExactHitQuery+=System.nanoTime()-t_Exact;
-            if(isMatch) {
-            	matchLines+=lineNo+",";
-            	
-            	String prop=getProp(store);
-            	if(returnWkt) { // 需要同时返回完整图形的wkt数据
-            		Geometry fullGeom=new WKBReader(Factory).read(wkbFull);
-            		String wkt=new WKTWriter().write(fullGeom);
-            		prop=prop.substring(0, prop.length()-1)+", \""+res.Set_ReturnWKTKey+"\": \""+wkt+"\"}";
-            	}
-            	
-            	if(res.Result!=null) {
-            		res.Result.add(prop);
-            	}
-            	res.ExactHitCount++;
+			byte[] wkbSub=null,wkbFull=null;
+			String[] wkbPos=getWkbPos(store);
+			String lineNo=wkbPos[0];
+			int fullPos=Integer.parseInt(wkbPos[1]);
+			int subPos=Integer.parseInt(wkbPos[2]);
+			
+			//如果wkb对应的这条数据已经有一个sub匹配了，就不需要在继续查询
+			if(matchLines.indexOf(","+lineNo+",")!=-1) {
+				continue;
 			}
-            
-            if(res.Set_EnvelopeHitResult!=null) {//将初步筛选的结果存入数组，如果要求了的话
-            	String prop=getProp(store);
-            	prop="{\"_PolygonPointNum_\": "+subGeom.getNumPoints()+","+prop.substring(1);
-            	res.Set_EnvelopeHitResult.add(prop);
-            }
-        }
+			
+			//提供了where筛选
+			if(where!=null) {
+				if(!where.Exec(getProp(store))) {
+					continue;
+				}
+			}
+			
+			//读取wkb数据
+			long t_IO=System.nanoTime();
+			Geometry subGeom=null;
+			if(ReadFromMemory) {
+				//从内存中得到wkb数据 或 直接存的对象
+				if(SetInitStoreInMemoryUseObject) {
+					subGeom=(Geometry)store.get("wkb");
+				} else {
+					wkbSub=(byte[])store.get("wkb");
+				}
+			} else {
+				wkbSub=ReadWkbFromFile(subPos);
+			}
+			if(returnWkt) {
+				wkbFull=ReadWkbFromFile(fullPos);
+			}
+			res.DurationN_IO+=System.nanoTime()-t_IO;
+			
+			//转换回图形
+			long t_GeometryParse=System.nanoTime();
+			if(subGeom==null) {
+				subGeom=new WKBReader(Factory).read(wkbSub);
+			}
+			res.DurationN_GeometryParse+=System.nanoTime()-t_GeometryParse;
+			
+			//是否精确匹配
+			long t_Exact=System.nanoTime();
+			boolean isMatch=subGeom.intersects(geom);
+			res.DurationN_ExactHitQuery+=System.nanoTime()-t_Exact;
+			if(isMatch) {
+				matchLines+=lineNo+",";
+				
+				String prop=getProp(store);
+				if(returnWkt) { // 需要同时返回完整图形的wkt数据
+					Geometry fullGeom=new WKBReader(Factory).read(wkbFull);
+					String wkt=new WKTWriter().write(fullGeom);
+					prop=prop.substring(0, prop.length()-1)+", \""+res.Set_ReturnWKTKey+"\": \""+wkt+"\"}";
+				}
+				
+				if(res.Result!=null) {
+					res.Result.add(prop);
+				}
+				res.ExactHitCount++;
+			}
+			
+			if(res.Set_EnvelopeHitResult!=null) {//将初步筛选的结果存入数组，如果要求了的话
+				String prop=getProp(store);
+				prop="{\"_PolygonPointNum_\": "+subGeom.getNumPoints()+","+prop.substring(1);
+				res.Set_EnvelopeHitResult.add(prop);
+			}
+		}
 		
 		res.EndTimeN=System.nanoTime();
 		return res;
@@ -191,6 +191,7 @@ public class AreaCityQuery {
 	
 	/**
 	 * 遍历所有边界图形的属性列表查询出符合条件的属性，然后返回图形的属性+边界图形WKT文本。
+	 * <br>读取到的wkt文本，可以直接粘贴到页面内渲染显示：https://xiangyuecn.gitee.io/areacity-jsspider-statsgov/assets/geo-echarts.html
 	 * 
 	 * <br>
 	 * <br>注意：初始化时必须保存了wkbs结构化数据文件，或者用的wkbs文件初始化的，否则不允许查询WKT数据。
@@ -216,10 +217,11 @@ public class AreaCityQuery {
 		
 		res.Set_ReturnWKTKey=wktKey;
 		boolean returnWkt=res.Set_ReturnWKTKey!=null && res.Set_ReturnWKTKey.length()>0;
+		boolean readWkt=returnWkt;
 		if(onFind!=null) {
-			returnWkt=true;
+			readWkt=true;
 		}
-		if(returnWkt && WkbsFilePath.length()==0) {
+		if(readWkt && WkbsFilePath.length()==0) {
 			throw new Exception("初始化时必须保存了wkbs结构化数据文件，或者用的wkbs文件初始化的，否则不允许查询WKT数据");
 		}
 		
@@ -229,48 +231,49 @@ public class AreaCityQuery {
 			//属性是否符合条件
 			long t_Exact=System.nanoTime();
 			String prop=getProp(store);
-			if(!where.Exec(prop)) {
+			boolean isFind=where.Exec(prop);
+			res.DurationN_ExactHitQuery+=System.nanoTime()-t_Exact;
+			if(!isFind) {
 				continue;
 			}
-			res.DurationN_ExactHitQuery+=System.nanoTime()-t_Exact;
 			
 			String wkt=null;
-			if(returnWkt) {
+			if(readWkt) {
 				//读取wkb
 				byte[] wkbFull=null;
 				if(!store.containsKey("empty")) {
 					String[] wkbPos=getWkbPos(store);
-		        	int fullPos=Integer.parseInt(wkbPos[1]);
-		        	
-		        	long t_IO=System.nanoTime();
-		        	wkbFull=ReadWkbFromFile(fullPos);
-		        	res.DurationN_IO+=System.nanoTime()-t_IO;
+					int fullPos=Integer.parseInt(wkbPos[1]);
+					
+					long t_IO=System.nanoTime();
+					wkbFull=ReadWkbFromFile(fullPos);
+					res.DurationN_IO+=System.nanoTime()-t_IO;
 				}
-	        	
-	        	//转换回图形
-	            long t_GeometryParse=System.nanoTime();
-	            Geometry fullGeom;
-	            if(wkbFull!=null) {
-	            	fullGeom=new WKBReader(Factory).read(wkbFull);
-	            } else {
-	            	fullGeom=Factory.createPolygon();
-	            }
-	            
-	            //生成wkt
-	            wkt=new WKTWriter().write(fullGeom);
-	            res.DurationN_GeometryParse+=System.nanoTime()-t_GeometryParse;
+				
+				//转换回图形
+				long t_GeometryParse=System.nanoTime();
+				Geometry fullGeom;
+				if(wkbFull!=null) {
+					fullGeom=new WKBReader(Factory).read(wkbFull);
+				} else {
+					fullGeom=Factory.createPolygon();
+				}
+				
+				//生成wkt
+				wkt=new WKTWriter().write(fullGeom);
+				res.DurationN_GeometryParse+=System.nanoTime()-t_GeometryParse;
 			}
-    		
+			
 			boolean add=true;
 			if(onFind!=null) {
 				add=onFind.Exec(new String[] { prop, wkt });
 			}
 			if (add && res.Result!=null) {
-				if(wkt!=null) {
+				if(returnWkt) {
 					prop=prop.substring(0, prop.length()-1)+", \""+res.Set_ReturnWKTKey+"\": \""+wkt+"\"}";
 				}
-    			res.Result.add(prop);
-    		}
+				res.Result.add(prop);
+			}
 			res.ExactHitCount++;
 		}
 		
@@ -284,55 +287,96 @@ public class AreaCityQuery {
 	 * 调试用的，读取已在wkbs结构化文件中保存的网格划分图形WKT数据，用于核对网格划分情况。
 	 * <br>读取到的wkt文本，可以直接粘贴到页面内渲染显示：https://xiangyuecn.gitee.io/areacity-jsspider-statsgov/assets/geo-echarts.html
 	 * 
-	 * @param where 必须提供where条件筛选
-	 * @param onReadLine 获取到一行wkt数据后会通过onReadLine回传，String[]参数为[prop,wkt]
+	 * @param wktKey 可以为null，比如填：wkt、polygon，作为json里的key: 存放wkt文本数据；如果传入空值，将只返回属性，不查询wkt文本数据；此参数会覆盖res.Set_ReturnWKTKey值
+	 * @param res 可以为null，如果提供结果对象，可通过此对象的Set_XXX属性控制某些查询行为，并且本次查询的结果和统计数据将累加到这个结果内（性能测试用）。注意：此结果对象非线程安全
+	 * @param where 必须提供一个函数，筛选属性数据（所有数据全过一遍），会传入属性的json字符串，如果需要匹配这个边界图形就返回true，否则返回false跳过这条边界图形
+	 * @param onFind 可选提供一个回调函数，每次查询到一条wkt数据后会通过onFind回传，String[]参数为[prop,wkt]；如果返回false数据将不会存入res结果中（也会忽略wktKey参数），需在回调中自行处理数据
 	 */
-	static public void Debug_ReadGeometryGridSplitsWKT(Func<String,Boolean> where, Func<String[], Boolean> onReadLine) throws Exception {
+	static public QueryResult Debug_ReadGeometryGridSplitsWKT(String wktKey, QueryResult res, Func<String,Boolean> where, Func<String[], Boolean> onFind) throws Exception {
 		if(GetInitStatus()==3) {
 			throw new Exception(InitInfo.ErrMsg);
 		}
 		if(GetInitStatus()!=2) {
 			throw new Exception("需要先Init完成后，再来进行查询调用");
 		}
-		if(WkbsFilePath.length()==0) {
-			throw new Exception("初始化时必须保存了wkbs结构化数据文件，或者用的wkbs文件初始化的，否则不允许ReadGeometryGridSplits");
+		if(res==null) res=new QueryResult();
+		res.QueryCount++;
+		long t_Start=System.nanoTime();
+		if(res.StartTimeN==0) res.StartTimeN=t_Start;
+		
+		res.Set_ReturnWKTKey=wktKey;
+		boolean returnWkt=res.Set_ReturnWKTKey!=null && res.Set_ReturnWKTKey.length()>0;
+		boolean readWkt=returnWkt;
+		if(onFind!=null) {
+			readWkt=true;
+		}
+		if(readWkt && WkbsFilePath.length()==0) {
+			throw new Exception("初始化时必须保存了wkbs结构化数据文件，或者用的wkbs文件初始化的，否则不允许查询WKT数据");
 		}
 		
 		for(int i=0,iL=WKTDataStores.size();i<iL;i++) {
 			HashMap<String, Object> store=WKTDataStores.get(i);
+
+			//属性是否符合条件
+			long t_Exact=System.nanoTime();
 			String prop=getProp(store);
-			if(!where.Exec(prop)) {
+			boolean isFind=where.Exec(prop);
+			res.DurationN_ExactHitQuery+=System.nanoTime()-t_Exact;
+			if(!isFind) {
 				continue;
 			}
 			
-			String[] wkbPos=getWkbPos(store);
-			ArrayList<Integer> subs=LineSubsPos.get(wkbPos[0]);
-			if(subs==null) {
-				continue;
-			}
-
-			ArrayList<Polygon> pols=new ArrayList<Polygon>();
-			for(int i2=0,i2L=subs.size();i2<i2L;i2++) {
-				byte[] wkb=ReadWkbFromFile(subs.get(i2));
-				Geometry subGeom=new WKBReader(Factory).read(wkb);
-				
-				if(subGeom instanceof Polygon) {
-					pols.add((Polygon)subGeom);
-				} else {
-					for(int i3=0,i3L=subGeom.getNumGeometries();i3<i3L;i3++) {
-						pols.add((Polygon)subGeom.getGeometryN(i3));
-					}
+			String wkt=null;
+			if(readWkt) {
+				String[] wkbPos=getWkbPos(store);
+				ArrayList<Integer> subs=LineSubsPos.get(wkbPos[0]);
+				if(subs==null) {
+					continue;
 				}
+				
+				//读取所有的切块，转换回图形
+				ArrayList<Polygon> pols=new ArrayList<Polygon>();
+				for(int i2=0,i2L=subs.size();i2<i2L;i2++) {
+					long t_IO=System.nanoTime();
+					byte[] wkb=ReadWkbFromFile(subs.get(i2));
+					res.DurationN_IO+=System.nanoTime()-t_IO;
+					
+					long t_GeometryParse=System.nanoTime();
+					Geometry subGeom=new WKBReader(Factory).read(wkb);
+					
+					if(subGeom instanceof Polygon) {
+						pols.add((Polygon)subGeom);
+					} else {
+						for(int i3=0,i3L=subGeom.getNumGeometries();i3<i3L;i3++) {
+							pols.add((Polygon)subGeom.getGeometryN(i3));
+						}
+					}
+					res.DurationN_GeometryParse+=System.nanoTime()-t_GeometryParse;
+				}
+				Geometry geom;
+				if(pols.size()==0) {
+					geom=Factory.createPolygon();
+				} else {
+					geom=Factory.createMultiPolygon(pols.toArray(new Polygon[0]));
+				}
+				wkt=new WKTWriter().write(geom);
 			}
-			Geometry geom;
-			if(pols.size()==0) {
-				geom=Factory.createPolygon();
-			} else {
-				geom=Factory.createMultiPolygon(pols.toArray(new Polygon[0]));
+			
+			boolean add=true;
+			if(onFind!=null) {
+				add=onFind.Exec(new String[] { prop, wkt });
 			}
-			String wkt=new WKTWriter().write(geom);
-			onReadLine.Exec(new String[] { prop, wkt });
+			if (add && res.Result!=null) {
+				if(returnWkt) {
+					prop=prop.substring(0, prop.length()-1)+", \""+res.Set_ReturnWKTKey+"\": \""+wkt+"\"}";
+				}
+				res.Result.add(prop);
+			}
+			res.ExactHitCount++;
 		}
+		
+		res.EndTimeN=System.nanoTime();
+		return res;
 	}
 	
 	
@@ -583,101 +627,101 @@ public class AreaCityQuery {
 						line=dataFile.readLine();
 						InitInfo.DurationN_FileRead+=System.nanoTime()-t_fr;
 						if(line==null) {
-			                //没有数据了
-			                if(!IsEnd[0]){
-			                    throw new Exception("初始化传入的文件未发现结束位置，可能文件已损坏");
-			                }
-			                break;
-			            }
+							//没有数据了
+							if(!IsEnd[0]){
+								throw new Exception("初始化传入的文件未发现结束位置，可能文件已损坏");
+							}
+							break;
+						}
 						lineNo=++LineNo[0];
 						line=line.trim();
-			            if(line.length()==0)continue;
+						if(line.length()==0)continue;
 
-			            if(IsStart[0] && line.charAt(0)==']'){
-			                //处理完成所有数据
-			            	IsEnd[0]=true;
-			                break;
-			            }
-			            if(!IsStart[0]){
-			                //等待开始标志
-			                if(line.indexOf("\"features\"")==0){
-			                    if(!line.endsWith("[")){
-			                        throw new Exception("初始化传入的文件第"+lineNo+"行风格不对，不支持处理此文件");
-			                    }
-			                    IsStart[0]=true;
-			                    
-			                    if(saveWkbsFile!=null) {//写入 wkbs 文件头，这里无需同步操作
-			                    	SaveWkbsWrite.Exec("/*******************"
-			                    		+"\n本wkbs文件是由 "+AreaCityQuery.class.getTypeName()+" 生成，为专用的结构化数据文件，用于边界图形数据加速解析。"
-			                    		+"\n@Version: "+Version
-			                    		+"\n@GridFactor: "+SetGridFactor
-			                    		+"\n@数据文件: "+dataFilePath
-			                    		+"\n@生成时间: "+new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())
-			                    		+"\n"
-			                    		+"\nGitHub: https://github.com/xiangyuecn/AreaCity-Query-Geometry （github可换成gitee）"
-			                    		+"\n省市区县乡镇区划边界数据: https://github.com/xiangyuecn/AreaCity-JsSpider-StatsGov （github可换成gitee）"
-			                    		+"\n*******************/"
-			                    		+"\n"
-			                    		+"\n\"features\": [");
-			                    }
-			                }
-			                continue;
-			            }
+						if(IsStart[0] && line.charAt(0)==']'){
+							//处理完成所有数据
+							IsEnd[0]=true;
+							break;
+						}
+						if(!IsStart[0]){
+							//等待开始标志
+							if(line.indexOf("\"features\"")==0){
+								if(!line.endsWith("[")){
+									throw new Exception("初始化传入的文件第"+lineNo+"行风格不对，不支持处理此文件");
+								}
+								IsStart[0]=true;
+								
+								if(saveWkbsFile!=null) {//写入 wkbs 文件头，这里无需同步操作
+									SaveWkbsWrite.Exec("/*******************"
+										+"\n本wkbs文件是由 "+AreaCityQuery.class.getTypeName()+" 生成，为专用的结构化数据文件，用于边界图形数据加速解析。"
+										+"\n@Version: "+Version
+										+"\n@GridFactor: "+SetGridFactor
+										+"\n@数据文件: "+dataFilePath
+										+"\n@生成时间: "+new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())
+										+"\n"
+										+"\nGitHub: https://github.com/xiangyuecn/AreaCity-Query-Geometry （github可换成gitee）"
+										+"\n省市区县乡镇区划边界数据: https://github.com/xiangyuecn/AreaCity-JsSpider-StatsGov （github可换成gitee）"
+										+"\n*******************/"
+										+"\n"
+										+"\n\"features\": [");
+								}
+							}
+							continue;
+						}
 					}// synchronized end
 					
 					//开始处理这一行数据
 
-		            long r_t1=System.nanoTime();
-		            //手工提取properties
-		            String[] propStrPtr;
-		            String propStr,wkbPosStr=lineNo+":0:0";
-		            boolean wkbTypeIsParent=false,wkbTypeIsSub=false,wkbTypeIsEmpty=false;
-		            int wkbIdx=0;
-		            if(isWkbsFile){
-		            	int i0=line.indexOf(WKB_SP_Pos);
-		            	String wkbType=line.substring(0, i0);
-		            	if(wkbType.equals("Sub")) {
-		            		wkbTypeIsSub=true;
-		            	} else if(wkbType.equals("Full")) {
-		            		// NOOP
-		            	} else if(wkbType.equals("Parent")) {
-		            		wkbTypeIsParent=true;
-		            	} else if(wkbType.equals("Empty")) {
-		            		wkbTypeIsEmpty=true;
-		            	}
+					long r_t1=System.nanoTime();
+					//手工提取properties
+					String[] propStrPtr;
+					String propStr,wkbPosStr=lineNo+":0:0";
+					boolean wkbTypeIsParent=false,wkbTypeIsSub=false,wkbTypeIsEmpty=false;
+					int wkbIdx=0;
+					if(isWkbsFile){
+						int i0=line.indexOf(WKB_SP_Pos);
+						String wkbType=line.substring(0, i0);
+						if(wkbType.equals("Sub")) {
+							wkbTypeIsSub=true;
+						} else if(wkbType.equals("Full")) {
+							// NOOP
+						} else if(wkbType.equals("Parent")) {
+							wkbTypeIsParent=true;
+						} else if(wkbType.equals("Empty")) {
+							wkbTypeIsEmpty=true;
+						}
 
-		            	i0+=WKB_SP_Pos.length();
-		            	int i1=line.indexOf(WKB_SP_Prop, i0);
-		            	wkbPosStr=line.substring(i0, i1);
-		            	
-		            	i1+=WKB_SP_Prop.length();
-		            	int i2=line.indexOf(WKB_SP_WKB, i1);
-		            	propStr=line.substring(i1, i2);
-		            	wkbIdx=i2+WKB_SP_WKB.length();
-		            } else {
-		            	int i0=line.indexOf("properties\"");
-		            	int i1=line.indexOf("{", i0);
-		            	int i2=line.indexOf("}", i0);
-		            	propStr=line.substring(i1, i2+1);
-		            }
-		            //手工提取geometry类型
-		            String typeStr="";
-		            if(!isWkbsFile){
-		            	int iGeom=line.indexOf("geometry\"");
-		            	
-		            	int i0=line.indexOf("type\"", iGeom);
-		            	int i1=line.indexOf("\"", i0+5);
-		            	int i2=line.indexOf("\"", i1+1);
-		            	typeStr=line.substring(i1+1, i2);
-		            }
-		            synchronized (InitInfo) {
-		            	InitInfo.DurationN_FileParse+=System.nanoTime()-r_t1;
-		            	
-		            	InitInfo.CurrentLine_No=lineNo;
+						i0+=WKB_SP_Pos.length();
+						int i1=line.indexOf(WKB_SP_Prop, i0);
+						wkbPosStr=line.substring(i0, i1);
+						
+						i1+=WKB_SP_Prop.length();
+						int i2=line.indexOf(WKB_SP_WKB, i1);
+						propStr=line.substring(i1, i2);
+						wkbIdx=i2+WKB_SP_WKB.length();
+					} else {
+						int i0=line.indexOf("properties\"");
+						int i1=line.indexOf("{", i0);
+						int i2=line.indexOf("}", i0);
+						propStr=line.substring(i1, i2+1);
+					}
+					//手工提取geometry类型
+					String typeStr="";
+					if(!isWkbsFile){
+						int iGeom=line.indexOf("geometry\"");
+						
+						int i0=line.indexOf("type\"", iGeom);
+						int i1=line.indexOf("\"", i0+5);
+						int i2=line.indexOf("\"", i1+1);
+						typeStr=line.substring(i1+1, i2);
+					}
+					synchronized (InitInfo) {
+						InitInfo.DurationN_FileParse+=System.nanoTime()-r_t1;
+						
+						InitInfo.CurrentLine_No=lineNo;
 						InitInfo.CurrentLine_Text=line;
 						InitInfo.CurrentLine_Prop=propStr;
 
-		            	//回调一下，顺带看看需不需要解析这条数据
+						//回调一下，顺带看看需不需要解析这条数据
 						if(OnInitProgress!=null) {
 							if(!OnInitProgress.Exec(InitInfo)) {
 								continue;
@@ -691,51 +735,51 @@ public class AreaCityQuery {
 							Strings.put(propStr, propStrPtr);
 						}
 					}
-		            
-		            //wkbs里面的非Sub图形，完整图形
-		            if(isWkbsFile && !wkbTypeIsSub) {
-		            	synchronized (InitInfo) {
-		            		InitInfo.GeometryCount++;
-		            	}
-		            	if(!wkbTypeIsEmpty) {//empty的丢到下面统一处理
-			            	HashMap<String,Object> store=new HashMap<>();
+					
+					//wkbs里面的非Sub图形，完整图形
+					if(isWkbsFile && !wkbTypeIsSub) {
+						synchronized (InitInfo) {
+							InitInfo.GeometryCount++;
+						}
+						if(!wkbTypeIsEmpty) {//empty的丢到下面统一处理
+							HashMap<String,Object> store=new HashMap<>();
 							store.put("prop", propStrPtr);
 							store.put("wkbPos", wkbPosStr);
-			            	synchronized (wktDataStores) {
-		                		wktDataStores.add(store);//存好WKT查询数据，一个数据只存一条就行了
-		                	}
-		            	}
-		            	if(wkbTypeIsParent) {//已经拆分了，上级完整图形无需再处理
-		            		continue;
-		            	}
-		            }
+							synchronized (wktDataStores) {
+								wktDataStores.add(store);//存好WKT查询数据，一个数据只存一条就行了
+							}
+						}
+						if(wkbTypeIsParent) {//已经拆分了，上级完整图形无需再处理
+							continue;
+						}
+					}
 
-		            //手工创建图形对象
-		            long r_t2=System.nanoTime();
-		            Geometry geomSrc;
-		            if(isWkbsFile){
-		            	byte[] wkb=Hex2Bytes(line, wkbIdx);
-		            	geomSrc=new WKBReader(Factory).read(wkb);
-		            } else {
-			            if(!(typeStr.equals("Polygon") || typeStr.equals("MultiPolygon"))) {
-			            	throw new Exception("初始化传入的文件第"+lineNo+"行"+typeStr+"数据不是Polygon类，要求必须是Polygon或者MultiPolygon，并且json文件内一条数据一行");
-			            }
-			            geomSrc=JSONLineParse(Factory, line);
-		            }
+					//手工创建图形对象
+					long r_t2=System.nanoTime();
+					Geometry geomSrc;
+					if(isWkbsFile){
+						byte[] wkb=Hex2Bytes(line, wkbIdx);
+						geomSrc=new WKBReader(Factory).read(wkb);
+					} else {
+						if(!(typeStr.equals("Polygon") || typeStr.equals("MultiPolygon"))) {
+							throw new Exception("初始化传入的文件第"+lineNo+"行"+typeStr+"数据不是Polygon类，要求必须是Polygon或者MultiPolygon，并且json文件内一条数据一行");
+						}
+						geomSrc=JSONLineParse(Factory, line);
+					}
 					synchronized (InitInfo) {
-		            	InitInfo.DurationN_GeometryParse+=System.nanoTime()-r_t2;
-		            	if(!isWkbsFile) {
-		            		InitInfo.GeometryCount++;
-		            	}
-		            	
+						InitInfo.DurationN_GeometryParse+=System.nanoTime()-r_t2;
+						if(!isWkbsFile) {
+							InitInfo.GeometryCount++;
+						}
+						
 						if(geomSrc.isEmpty()){//空的存一下属性，边界就丢弃
 							HashMap<String,Object> store=new HashMap<>();
 							store.put("prop", propStrPtr);
 							store.put("wkbPos", wkbPosStr);
 							store.put("empty", true);
 							emptyGeoms.add(store);
-			                continue;
-			            }
+							continue;
+						}
 					}
 					
 					//创建索引，将每个图形放到rtree，图形如果坐标点过多，先按网格拆成小的
@@ -744,32 +788,32 @@ public class AreaCityQuery {
 					if(!isWkbsFile) { //wkbs文件已经拆好了，非wkbs才需要按网格拆成小的
 						geomGrid=GeometryGridSplit(Factory, geomSrc, SetGridFactor);
 					}
-		            int wkbMemoryLen=0;
-		            int polygonNum=1;
-		            if(geomGrid instanceof MultiPolygon) {
-		                polygonNum = geomGrid.getNumGeometries();
-		            }
-		            
-		            int parentPos=0;
+					int wkbMemoryLen=0;
+					int polygonNum=1;
+					if(geomGrid instanceof MultiPolygon) {
+						polygonNum = geomGrid.getNumGeometries();
+					}
+					
+					int parentPos=0;
 					if(polygonNum>1 && saveWkbsFile!=null) {//有多个Polygon时，先存一个完整的父级
 						byte[] wkb=new WKBWriter().write(geomSrc);
-		            	synchronized (saveWkbsFile) {
-		            		parentPos=saveWkbsFileLength[0]+1;//+1 换行符
-		            		String wkbPos=lineNo+":"+parentPos+":"+parentPos; //编号:parent:sub 数据存储位置
-			            	
-			            	SaveWkbsWrite.Exec("\nParent"+WKB_SP_Pos+wkbPos+WKB_SP_Prop+propStr+WKB_SP_WKB+Bytes2Hex(wkb));
-		            	}
+						synchronized (saveWkbsFile) {
+							parentPos=saveWkbsFileLength[0]+1;//+1 换行符
+							String wkbPos=lineNo+":"+parentPos+":"+parentPos; //编号:parent:sub 数据存储位置
+							
+							SaveWkbsWrite.Exec("\nParent"+WKB_SP_Pos+wkbPos+WKB_SP_Prop+propStr+WKB_SP_WKB+Bytes2Hex(wkb));
+						}
 					}
 					
 					for(int i0=0;i0<polygonNum;i0++) {
-		                Polygon polygon;
-		                if(geomGrid instanceof MultiPolygon) {//MultiPolygon 拆成 Polygon 减小范围
-		                    polygon=(Polygon)geomGrid.getGeometryN(i0);
-		                }else{
-		                    polygon=(Polygon)geomGrid;
-		                }
+						Polygon polygon;
+						if(geomGrid instanceof MultiPolygon) {//MultiPolygon 拆成 Polygon 减小范围
+							polygon=(Polygon)geomGrid.getGeometryN(i0);
+						}else{
+							polygon=(Polygon)geomGrid;
+						}
 						
-		                byte[] wkb=null;
+						byte[] wkb=null;
 						String wkbPos=null;//编号:parent:sub 数据存储位置
 						if(saveWkbsFile!=null) {//需要保存到文件
 							synchronized (saveWkbsFile) {
@@ -787,7 +831,7 @@ public class AreaCityQuery {
 							}
 						}
 
-			            HashMap<String,Object> store=new HashMap<>();
+						HashMap<String,Object> store=new HashMap<>();
 						store.put("prop", propStrPtr);
 						if(ReadFromMemory){//写入内存
 							if(SetInitStoreInMemoryUseObject) {
@@ -796,7 +840,7 @@ public class AreaCityQuery {
 								if(wkb==null) {
 									wkb=new WKBWriter().write(polygon);
 								}
-				                wkbMemoryLen+=wkb.length;
+								wkbMemoryLen+=wkb.length;
 								store.put("wkb", wkb);
 							}
 						}
@@ -806,35 +850,35 @@ public class AreaCityQuery {
 						}
 						store.put("wkbPos", wkbPos);
 						String[] wkbPosArr=getWkbPos(store);
-		                
-		                //构造外接矩形，放到rtree里面，非线程安全需同步操作
+						
+						//构造外接矩形，放到rtree里面，非线程安全需同步操作
 						synchronized (rtree) {
-			                rtree.insert(polygon.getEnvelopeInternal(), store);
-			                
-			            	//在这个同步块里面顺带把sub添加到这行数据的引用列表中
-			                ArrayList<Integer> subs=lineSubsPos.get(wkbPosArr[0]);
-			                if(subs==null) {
-			                	subs=new ArrayList<>();
-			                	lineSubsPos.put(wkbPosArr[0], subs);
-			                }
-			                subs.add(Integer.parseInt(wkbPosArr[2]));
+							rtree.insert(polygon.getEnvelopeInternal(), store);
+							
+							//在这个同步块里面顺带把sub添加到这行数据的引用列表中
+							ArrayList<Integer> subs=lineSubsPos.get(wkbPosArr[0]);
+							if(subs==null) {
+								subs=new ArrayList<>();
+								lineSubsPos.put(wkbPosArr[0], subs);
+							}
+							subs.add(Integer.parseInt(wkbPosArr[2]));
 						}
-		                if(i0==0 && !isWkbsFile) {
-		                	//这个只在查询完整wkt数据时才有用，一个数据只存一条就行了，wkbs的上面已经存好了
-		                	synchronized (wktDataStores) {
-		                		wktDataStores.add(store);
-		                	}
-		                }
+						if(i0==0 && !isWkbsFile) {
+							//这个只在查询完整wkt数据时才有用，一个数据只存一条就行了，wkbs的上面已经存好了
+							synchronized (wktDataStores) {
+								wktDataStores.add(store);
+							}
+						}
 					}
 					synchronized (InitInfo) {
-		            	InitInfo.DurationN_Index+=System.nanoTime()-r_t3;
+						InitInfo.DurationN_Index+=System.nanoTime()-r_t3;
 
-		            	if(ReadFromMemory){
+						if(ReadFromMemory){
 							if(InitInfo.WkbMemory==-1)InitInfo.WkbMemory=0;
 							InitInfo.WkbMemory+=wkbMemoryLen;
-		            	}
+						}
 						
-			            InitInfo.PolygonCount+=polygonNum;
+						InitInfo.PolygonCount+=polygonNum;
 					}
 				}
 				return null;
@@ -1028,27 +1072,27 @@ public class AreaCityQuery {
 	static private Geometry JSONLineParse(GeometryFactory factory, String line) {
 		ArrayList<__ParsePolygon> multiPols=new ArrayList<>();
 		int iGeom=line.indexOf("geometry\"");
-        for(int i=line.indexOf("coordinates\"", iGeom),L=line.length();i<L;) {
-        	__ParsePolygon pr=new __ParsePolygon(factory, line, i);
-        	if(pr.isFind) {
-        		i=pr.lastIndex;
-        		multiPols.add(pr);
-        	} else {
-        		break;
-        	}
-        }
-        
-        if(multiPols.size()==1) {
-        	return multiPols.get(0).toPolygon(factory);
-        } else if(multiPols.size()>1) {
-        	Polygon[] pols=new Polygon[multiPols.size()];
-        	for(int i=0,L=multiPols.size();i<L;i++) {
-        		pols[i]=multiPols.get(i).toPolygon(factory);
-        	}
-        	return factory.createMultiPolygon(pols);
-        } else {
-        	return factory.createPolygon();
-        }
+		for(int i=line.indexOf("coordinates\"", iGeom),L=line.length();i<L;) {
+			__ParsePolygon pr=new __ParsePolygon(factory, line, i);
+			if(pr.isFind) {
+				i=pr.lastIndex;
+				multiPols.add(pr);
+			} else {
+				break;
+			}
+		}
+		
+		if(multiPols.size()==1) {
+			return multiPols.get(0).toPolygon(factory);
+		} else if(multiPols.size()>1) {
+			Polygon[] pols=new Polygon[multiPols.size()];
+			for(int i=0,L=multiPols.size();i<L;i++) {
+				pols[i]=multiPols.get(i).toPolygon(factory);
+			}
+			return factory.createMultiPolygon(pols);
+		} else {
+			return factory.createPolygon();
+		}
 	}
 	
 	static private class __ParsePolygon{
@@ -1067,15 +1111,15 @@ public class AreaCityQuery {
 				}
 				if(c==']') {
 					polEnds++;
-	    			if(polEnds==2) {// 环结束
-	    				LinearRing ring=factory.createLinearRing(points.toArray(new Coordinate[0]));
-	        			if(ring0==null) {
-	        				ring0=ring;
-	        			}else{
-	        				ringX.add(ring);
-	        			}
-	        			points=new ArrayList<>();
-	    			}
+					if(polEnds==2) {// 环结束
+						LinearRing ring=factory.createLinearRing(points.toArray(new Coordinate[0]));
+						if(ring0==null) {
+							ring0=ring;
+						}else{
+							ringX.add(ring);
+						}
+						points=new ArrayList<>();
+					}
 					multiEnds++;
 					if(multiEnds==3) {// MultiPolygon结束
 						i0++;break;
@@ -1251,8 +1295,8 @@ public class AreaCityQuery {
 	/**将错误堆栈转成字符串**/
 	static private String ErrorStack(Throwable e) {
 		StringWriter writer = new StringWriter();
-        e.printStackTrace(new PrintWriter(writer));
-        return writer.toString();
+		e.printStackTrace(new PrintWriter(writer));
+		return writer.toString();
 	}
 	/**纳秒显示成ms，小数点后有数字开始两位**/
 	static private String Nano(double nanoTime) {
@@ -1282,7 +1326,7 @@ public class AreaCityQuery {
 			totalFn.setAccessible(true);
 			Method freeFn=osMX.getClass().getMethod("getFreePhysicalMemorySize");
 			freeFn.setAccessible(true);
-	        return (long)totalFn.invoke(osMX) - (long)freeFn.invoke(osMX);
+			return (long)totalFn.invoke(osMX) - (long)freeFn.invoke(osMX);
 		}catch (Exception e) {
 			return 0;
 		}
@@ -1376,7 +1420,7 @@ public class AreaCityQuery {
 			str.append("\n内存占用: "+Memory(EndMemory_JavaRuntime- StartMemory_JavaRuntime)+" (Java Runtime)");
 			str.append(", "+Memory(EndMemory_System - StartMemory_System)+" (系统)");
 			str.append(", Java GC耗时: "+Nano(DurationN_JavaGC));
-	        
+			
 			for(Entry<String, String> kv : OtherInfo.entrySet()) {
 				str.append("\n"+kv.getKey()+": "+kv.getValue());
 			}
