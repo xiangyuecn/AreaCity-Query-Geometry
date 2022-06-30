@@ -15,7 +15,7 @@
 
 [​](?)
 
-你可以只copy `AreaCityQuery.java` 文件到你的项目中使用（建好package目录或者修改一下package），项目中引入`jts库`，就能使用 `AreaCityQuery` 中的所有查找功能了。也可以clone整个项目代码双击 `编译和运行Test.java直接测试.bat` 即可直接运行测试。
+你可以只copy `AreaCityQuery.java` 文件到你的项目中使用（建好package目录或者修改一下package），项目中引入`jts库`，就能使用 `AreaCityQuery` 中的所有查找功能了。也可以clone整个项目代码双击 `编译和运行Test.java直接测试.bat` 即可直接运行测试（Mac需自己用javac进行编译运行）。
 
 **API和图形界面**：本工具已自带了一个HTTP API服务，运行测试然后通过菜单启动此服务，然后就可以直接在浏览器上访问这些接口；此API接口可以直接在 [ECharts Map四级下钻在线测试和预览](https://xiangyuecn.gitee.io/areacity-jsspider-statsgov/assets/geo-echarts.html) 页面的`自定义数据源`中进行调用测试，页面会立即绘制查询出来的边界图形。
 
@@ -121,6 +121,8 @@ declare @t datetime = getdate(); declare @val varchar; declare @i int =0; while 
 2. 下载开源库里面的“AreaCity-Geo格式转换工具软件”；
 3. 打开转换工具软件，选择ok_geo.csv，然后导出成geojson文件即可（默认会导出全国的省级数据，通过填写不同城市名前缀可以导出不同城市）。
 
+> 如果你有多个小的geojson文件，需要合并成一个才行，可以通过上面下载的 `AreaCity-Geo格式转换工具软件` 中的 `高级功能`-`GeoJSON多个文件合并成一个文件` 来合并。
+
 
 [​](?)
 
@@ -189,9 +191,13 @@ System.out.println(res1+"\n"+res2+"\n"+res3);
 
 ![控制台运行](images/use-console.png)
 
-HTTP API图形界面：
+HTTP API图形界面-边界查询：
 
-![HTTP API图形界面](images/use-map-echarts.png)
+![HTTP API图形界面-边界查询](images/use-map-echarts.png)
+
+HTTP API图形界面-坐标查询：
+
+![HTTP API图形界面-坐标查询](images/use-map-echarts2.png)
 
 HTTP API调用查询：
 
@@ -216,7 +222,9 @@ HTTP API调用查询：
 [​](?)
 
 ## 关于RTree索引
-研究过程中，群成员（`QQ: 2668361600`）已实现1秒几万次查询，介绍使用RTree索引来加速空间数据查找；通过`com.github.davidmoten:rtree`来给每个图形单独建一个索引，索引内存放此图形的每一条边，计算坐标点几何关系的时候，直接通过射线法用RTree来查找和图形相交的边数，性能极高；相对的内存占用也非常高，测试的省市区三级需要2G多内存，仅区级也需要1.3G内存，因为内存占用过大的问题，目前并未使用本方法，有兴趣可以自行用RTree实现一下，性能可提升10+倍。
+研究过程中，群成员已实现1秒几万次查询，介绍使用RTree索引来加速空间数据查找（感谢群成员`QQ: 2668361600`的介绍）；通过`com.github.davidmoten:rtree`来给每个图形单独建一个索引，索引内存放此图形的每一条边，计算坐标点几何关系的时候，直接通过射线法用RTree来查找和图形相交的边数，性能极高；相对的内存占用也非常高，测试的省市区三级需要2G多内存，仅区级也需要1.3G内存，因为内存占用过大的问题，目前并未使用本方法，有兴趣可以自行用RTree实现一下，性能可提升10+倍。
+
+在[v2ex发的帖子](https://www.v2ex.com/t/863092)也有同学介绍使用`google s2 算法`来进行查询，性能也是极高的，也可以学习研究研究。
 
 jts库内部已自带了STRtree，目前已用于加速envelope的查找，进行初步数据的筛选，性能也是极高的。
 
