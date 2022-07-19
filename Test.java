@@ -66,7 +66,7 @@ public class Test {
 		System.out.println(HR);
 		System.out.println("首次初始化会从.json或.geojson文件中读取边界图形数据，速度比较慢，会自动生成.wkbs结尾的结构化文件，下次初始化就很快了。");
 		System.out.println("  - 如果.wkbs文件已存在并且有效，将优先从wkbs文件中读取数据，速度很快。");
-		System.out.println("  - 你可以在当前目录内放一个 .json|.geojson|.wkbs 文件(utf-8)，会自动开始初始化。");
+		System.out.println("  - 你可以在当前目录内放入 .json|.geojson|.wkbs 文件(utf-8)，可通过菜单进行选择初始化，否则需要输入文件路径。");
 		System.out.println("  - 当前目录："+new File("").getAbsolutePath());
 		System.out.println("  - json文件内必须一条数据占一行，如果不是将不支持解析，请按下面的方法生成一个json文件测试。");
 		System.out.println(HR);
@@ -78,15 +78,7 @@ public class Test {
 		System.out.println(HR);
 		boolean useInputFile=false;
 		boolean useChoice=false;
-		if(jsonFiles.size()==1) {
-			jsonFile=jsonFiles.get(0);
-			System.out.println("在当前目录内发现json文件："+jsonFile+"，正在从此文件初始化...");
-		} else if(jsonFiles.size()>1) {
-			useChoice=true;
-		} else if(wkbsFiles.size()==1) {
-			wkbsFile=wkbsFiles.get(0);
-			System.out.println("在当前目录内发现wkbs文件："+wkbsFile+"，正在从此文件初始化...");
-		} else if(wkbsFiles.size()>1){
+		if(jsonFiles.size()>0 || wkbsFiles.size()>0) {
 			useChoice=true;
 		} else {
 			System.out.println("在当前目录内未发现任何一个 .json|.geojson|.wkbs 文件，需手动填写文件路径。");
@@ -94,7 +86,7 @@ public class Test {
 			useInputFile=true;
 		}
 		if(useChoice) {
-			System.out.println("在当前目录内发现多个文件，请选择要从哪个文件初始化，请输入文件序号：");
+			System.out.println("在当前目录内发现数据文件，请选择要从哪个文件初始化，请输入文件序号：");
 			int idx=0;
 			System.out.println(idx+". 手动输入文件路径");
 			for(String name : jsonFiles) {
@@ -114,7 +106,8 @@ public class Test {
 					useInputFile=true;
 					break;
 				} else if(txt.length()>0) {
-					idx=Integer.parseInt(txt);
+					idx=-1;
+					try { idx=Integer.parseInt(txt); } catch (Exception e){ }
 					if(idx>0 && idx<=jsonFiles.size()) {
 						jsonFile=jsonFiles.get(idx-1);
 					} else if(idx>0 && idx-jsonFiles.size()<=wkbsFiles.size()) {
@@ -128,7 +121,7 @@ public class Test {
 			}
 		}
 		if(useInputFile) {
-			System.out.println("请输入初始化要读取的一个 .json|.geojson|.wkbs 文件路径：");
+			System.out.println("请输入初始化要读取的一个 .json|.geojson|.wkbs 文件完整路径：");
 			while(true) {
 				System.out.print("> ");
 				String txt=ReadIn();
@@ -193,6 +186,7 @@ public class Test {
 					if(!Deep2Only && !HasDeep0)HasDeep0=prop.contains("deep:0");
 					if(!Deep2Only && !HasDeep1)HasDeep1=prop.contains("deep:1");
 					if(!HasDeep2)HasDeep2=prop.contains("deep:2");
+					if(!Deep2Only && !HasDeep3)HasDeep3=prop.contains("unique_id:");
 					
 					if(Deep2Only) {
 						return prop.contains("deep:2"); //只提取区级，其他一律返回false跳过解析
@@ -210,6 +204,8 @@ public class Test {
 
 		System.out.println("========== "+(storeInWkbsFile?"Init_StoreInWkbsFile":"Init_StoreInMemory")+" ==========");
 		System.out.println(AreaCityQuery.GetInitInfo().toString());
+		System.out.println();
+		System.out.println("已加载数据级别："+(HasDeep0?"√":"×")+"省，"+(HasDeep1?"√":"×")+"市，"+(HasDeep2?"√":"×")+"区县，"+(HasDeep3?"√":"×")+"乡镇 （×为未加载，可能是数据文件中并不含此级数据）");
 		System.out.println();
 	}
 	
@@ -745,7 +741,7 @@ public class Test {
 				System.out.println("9. HTTP: 启动本地轻量HTTP API服务");
 			}
 			System.out.println(HR);
-			System.out.println("-. 输入 exit 退出");
+			System.out.println("*. 输入 exit 退出");
 			System.out.println();
 			System.out.println("请输入菜单序号：");
 			System.out.print("> ");

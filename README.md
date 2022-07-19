@@ -45,6 +45,74 @@ Test.java|可选|测试控制台程序，包含了所有功能的测试，包括
 
 
 
+
+
+
+[​](?)
+
+[​](?)
+
+[​](?)
+
+[​](?)
+
+## 如何使用
+
+### 前期准备：生成GeoJSON文件
+程序初始化时，需要提供一个geojson文件（.json|.geojson），如果你没有此文件，可以按以下步骤获得最新的全国省市区县乡镇边界数据json文件：
+1. 请到开源库下载省市区边界数据ok_geo.csv文件: https://github.com/xiangyuecn/AreaCity-JsSpider-StatsGov （github可换成gitee）；
+2. 下载开源库里面的“AreaCity-Geo格式转换工具软件”；
+3. 打开转换工具软件，选择ok_geo.csv，然后导出成geojson文件即可（默认会导出全国的省级数据，通过填写不同城市名前缀可以导出不同城市）。
+
+> 如果你有多个小的geojson文件，需要合并成一个才行，可以通过上面下载的 `AreaCity-Geo格式转换工具软件` 中的 `高级功能`-`GeoJSON多个文件合并成一个文件` 来合并。
+> 
+> 源码内已提供了一个 `仅供测试-全国省级GeoJSON数据-大幅简化粗略版.json` 文件（为了大幅减小文件体积，已严重精简过了，不可在其它地方使用），可以直接使用此文件测试，但只能测试到省级边界，如需正式测试或使用，请参考上面方法自行生成geojson文件。
+
+
+[​](?)
+
+### 使用方式一：通过HTTP API服务使用
+操作步骤：
+1. 双击 `编译和运行Test.java直接测试.bat` 运行测试控制台程序；
+2. 根据控制台菜单命令进行初始化（需先把一个geojson文件放本程序目录内，否则要输入路径）；
+3. 进入9号菜单，启动本地轻量HTTP API服务（编辑 Test.java 文件内的`HttpApiServerPort`可修改端口）；
+4. 浏览器访问：`http://127.0.0.1:9527/` 查看接口文档；
+5. 在需要的地方直接调用http地址接口，得到json响应结果；
+6. 如需外网访问，可以直接暴露端口，或使用Nginx之类的反代此http端口（通过Nginx提供https访问）。
+
+此HTTP API接口可以直接在 [ECharts Map四级下钻在线测试和预览](https://xiangyuecn.gitee.io/areacity-jsspider-statsgov/assets/geo-echarts.html) 页面的`自定义数据源`中进行调用测试，页面会立即绘制查询出来的边界图形。
+
+
+[​](?)
+
+### 使用方式二：Java直接调用
+``` java
+//先初始化，全局只会初始化一次，每次查询前都调用即可（查询会在初始化完成后进行），两种初始化方式根据自己业务情况二选一
+//首次初始化会从.json或.geojson文件中读取边界图形数据，速度比较慢，会自动生成.wkbs结尾的结构化文件，下次初始化就很快了
+AreaCityQuery.Init_StoreInWkbsFile("geojson文件路径", "geojson文件路径.wkbs", true);
+//AreaCityQuery.Init_StoreInMemory("geojson文件路径", "geojson文件路径.wkbs", true);
+
+//AreaCityQuery.OnInitProgress=(initInfo)->{ ... } //初始化过程中的回调，可以绑定一个函数，接收初始化进度信息
+
+//查询包含一个坐标点的所有边界图形的属性数据，可通过res参数让查询额外返回wkt格式边界数据
+QueryResult res1=AreaCityQuery.QueryPoint(114.044346, 22.691963, null, null);
+
+//查询和一个图形（点、线、面）有交点的所有边界图形的属性数据，可通过res参数让查询额外返回wkt格式边界数据
+Geometry geom=new WKTReader(AreaCityQuery.Factory).read("LINESTRING(114.233963 30.546038, 114.468109 30.544264)");
+QueryResult res2=AreaCityQuery.QueryGeometry(geom, null, null);
+
+//读取省市区的边界数据wkt格式，这个例子会筛选出武汉市所有区县
+QueryResult res3=AreaCityQuery.ReadWKT_FromWkbsFile("wkt_polygon", null, (prop)->{return prop.contains("武汉市 ");}, null);
+
+
+System.out.println(res1+"\n"+res2+"\n"+res3);
+//****更多的实例，请阅读 Test.java****
+//****更多功能方法，请阅读 AreaCityQuery.java 源码****
+```
+
+
+
+
 [​](?)
 
 [​](?)
@@ -100,69 +168,6 @@ create procedure ptest() begin declare i int default 0; while i<100 do do (selec
 
 -- SQL Server（2008）在polygon列创建空间索引加速
 declare @t datetime = getdate(); declare @val varchar; declare @i int =0; while @i<100 begin; set @val=(select id,ext_path from 【表名】 where polygon.STIntersects(geometry::STGeomFromText('POINT(114.044346 22.691963)',0))=1 for xml path('')); set @i=@i+1; end; select DATEDIFF(MS, @t, GETDATE())/100.0
-```
-
-
-
-
-[​](?)
-
-[​](?)
-
-[​](?)
-
-[​](?)
-
-## 如何使用
-
-### 前期准备：生成GeoJSON文件
-程序初始化时，需要提供一个geojson文件（.json|.geojson），如果你没有此文件，可以按以下步骤获得最新的全国省市区县乡镇边界数据json文件：
-1. 请到开源库下载省市区边界数据ok_geo.csv文件: https://github.com/xiangyuecn/AreaCity-JsSpider-StatsGov （github可换成gitee）；
-2. 下载开源库里面的“AreaCity-Geo格式转换工具软件”；
-3. 打开转换工具软件，选择ok_geo.csv，然后导出成geojson文件即可（默认会导出全国的省级数据，通过填写不同城市名前缀可以导出不同城市）。
-
-> 如果你有多个小的geojson文件，需要合并成一个才行，可以通过上面下载的 `AreaCity-Geo格式转换工具软件` 中的 `高级功能`-`GeoJSON多个文件合并成一个文件` 来合并。
-
-
-[​](?)
-
-### 使用方式一：通过HTTP API服务使用
-操作步骤：
-1. 双击 `编译和运行Test.java直接测试.bat` 运行测试控制台程序；
-2. 根据控制台菜单命令进行初始化（需先把一个geojson文件放本程序目录内，否则要输入路径）；
-3. 进入9号菜单，启动本地轻量HTTP API服务（编辑 Test.java 文件内的`HttpApiServerPort`可修改端口）；
-4. 浏览器访问：`http://127.0.0.1:9527/` 查看接口文档；
-5. 在需要的地方直接调用http地址接口，得到json响应结果；
-6. 如需外网访问，可以直接暴露端口，或使用Nginx之类的反代此http端口（通过Nginx提供https访问）。
-
-此HTTP API接口可以直接在 [ECharts Map四级下钻在线测试和预览](https://xiangyuecn.gitee.io/areacity-jsspider-statsgov/assets/geo-echarts.html) 页面的`自定义数据源`中进行调用测试，页面会立即绘制查询出来的边界图形。
-
-
-[​](?)
-
-### 使用方式二：Java直接调用
-``` java
-//先初始化，全局只会初始化一次，每次查询前都调用即可（查询会在初始化完成后进行），两种初始化方式根据自己业务情况二选一
-//首次初始化会从.json或.geojson文件中读取边界图形数据，速度比较慢，会自动生成.wkbs结尾的结构化文件，下次初始化就很快了
-AreaCityQuery.Init_StoreInWkbsFile("geojson文件路径", "geojson文件路径.wkbs", true);
-//AreaCityQuery.Init_StoreInMemory("geojson文件路径", "geojson文件路径.wkbs", true);
-
-//AreaCityQuery.OnInitProgress=(initInfo)->{ ... } //初始化过程中的回调，可以绑定一个函数，接收初始化进度信息
-
-//查询包含一个坐标点的所有边界图形的属性数据，可通过res参数让查询额外返回wkt格式边界数据
-QueryResult res1=AreaCityQuery.QueryPoint(114.044346, 22.691963, null, null);
-
-//查询和一个图形（点、线、面）有交点的所有边界图形的属性数据，可通过res参数让查询额外返回wkt格式边界数据
-Geometry geom=new WKTReader(AreaCityQuery.Factory).read("LINESTRING(114.233963 30.546038, 114.468109 30.544264)");
-QueryResult res2=AreaCityQuery.QueryGeometry(geom, null, null);
-
-//读取省市区的边界数据wkt格式，这个例子会筛选出武汉市所有区县
-QueryResult res3=AreaCityQuery.ReadWKT_FromWkbsFile("wkt_polygon", null, (prop)->{return prop.contains("武汉市 ");}, null);
-
-
-System.out.println(res1+"\n"+res2+"\n"+res3);
-//****更多的实例，请阅读 Test.java****
-//****更多功能方法，请阅读 AreaCityQuery.java 源码****
 ```
 
 
