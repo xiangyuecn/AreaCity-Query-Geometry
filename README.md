@@ -2,7 +2,7 @@
 
 # :open_book:AreaCity-Query-Geometry坐标边界查询工具
 
-**本工具核心功能：使用`jts库`从`省市区县乡镇边界数据`（[AreaCity-JsSpider-StatsGov开源库](https://github.com/xiangyuecn/AreaCity-JsSpider-StatsGov)）或`geojson边界数据`文件中查找出和任意点、线、面有相交的矢量边界，内存占用低，性能优良。**
+**本工具核心功能：使用`jts库`从`省市区县乡镇边界数据`（[AreaCity-JsSpider-StatsGov开源库](https://github.com/xiangyuecn/AreaCity-JsSpider-StatsGov)）或`geojson边界数据`文件中查找出和任意点、线、面有相交的矢量边界，内存占用低，性能优良（1秒可查1万个以上坐标对应的城市信息）。**
 
 - 查询一个坐标点对应的城市信息；
 - 查询一条路径经过的所有城市；
@@ -65,7 +65,9 @@ Test.java|可选|测试控制台程序，包含了所有功能的测试，包括
 3. 打开转换工具软件，选择ok_geo.csv，然后导出成geojson文件即可（默认会导出全国的省级数据，通过填写不同城市名前缀可以导出不同城市）。
 
 > 如果你有多个小的geojson文件，需要合并成一个才行，可以通过上面下载的 `AreaCity-Geo格式转换工具软件` 中的 `高级功能`-`GeoJSON多个文件合并成一个文件` 来合并。
-> 
+
+> 通过ok_geo.csv生成的geojson文件的坐标系默认是`GCJ-02`火星坐标系，查询时所有输入坐标参数的坐标系必须也是`GCJ-02`，否则坐标可能会有比较大的偏移，导致查询结果不正确；可以在转换工具的高级功能中使用坐标系转换，比如转成`WGS-84`GPS坐标系，重新导出geojson文件，这样查询时就能准确的查询GPS坐标了。
+
 > 源码内已提供了一个 `仅供测试-全国省级GeoJSON数据-大幅简化粗略版.json` 文件（为了大幅减小文件体积，已严重精简过了，不可在其它地方使用），可以直接使用此文件测试，但只能测试到省级边界，如需正式测试或使用，请参考上面方法自行生成geojson文件。
 
 
@@ -94,6 +96,7 @@ AreaCityQuery.Init_StoreInWkbsFile("geojson文件路径", "geojson文件路径.w
 
 //AreaCityQuery.OnInitProgress=(initInfo)->{ ... } //初始化过程中的回调，可以绑定一个函数，接收初始化进度信息
 
+//注意：以下查询中所有坐标参数的坐标系必须和初始化时使用的geojson数据的坐标系一致，否则坐标可能会有比较大的偏移，导致查询结果不正确
 //查询包含一个坐标点的所有边界图形的属性数据，可通过res参数让查询额外返回wkt格式边界数据
 QueryResult res1=AreaCityQuery.QueryPoint(114.044346, 22.691963, null, null);
 
@@ -109,6 +112,16 @@ System.out.println(res1+"\n"+res2+"\n"+res3);
 //****更多的实例，请阅读 Test.java****
 //****更多功能方法，请阅读 AreaCityQuery.java 源码****
 ```
+
+[​](?)
+
+### 附：.wkbs文件说明
+初始化时如果提供了`saveWkbsFilePath`参数（为.wkbs结构化文件的路径）：
+- 如果此文件已存在，将自动从此文件进行初始化，初始化速度会很快（文件只读不写）；
+- 如果此文件不存在，将从.json或.geojson文件中读取边界图形数据，并生成此文件，速度比较慢（文件读写）。
+
+因此可以先在本地用json文件进行初始化，自动生成一个wkbs文件，然后copy wkbs文件到别的地方使用（比如服务器、只读环境中）。
+
 
 
 

@@ -44,6 +44,7 @@ public class Test_HttpApiServer {
 		Desc+="\n\n  - GET /readWKT?id=&pid=&deep=&extPath=&returnWKTKey= 读取边界图形的WKT文本数据；前四个参数可以组合查询或查一个参数（边界的属性中必须要有这些字段才能查询出来），id：查询指定id|unique_id的边界；pid：查询此pid下的所有边界；deep：限制只返回特定层级的数据，取值：0省1市2区想3乡镇；extPath：查询和ext_path完全相同值的边界，首尾支持*通配符（如：*武汉*）；returnWKTKey回边界的wkt文本数据放到此key下，默认值polygon_wkt，填0不返回wkt文本数据；注意：默认只允许输出最大20M的WKT数据，请参考下面的注意事项。";
 		Desc+="\n\n  - GET /debugReadGeometryGridSplitsWKT?id=&pid=&deep=&extPath=&returnWKTKey= Debug读取边界网格划分图形WKT文本数据；参数和/readWKT接口一致。";
 		Desc+="\n\n  - JSON响应：{c:0, v:{...}, m:\"错误消息\"} c=0代表接口调用成功，v为内容；c=其他值调用错误，m为错误消息。";
+		Desc+="\n\n  - 注意：所有输入坐标参数的坐标系必须和初始化时使用的geojson数据的坐标系一致，否则坐标可能会有比较大的偏移，导致查询结果不正确。";
 		Desc+="\n\n  - 注意：如果要输出大量WKT数据，请调大Java内存，不然可能是 -Xmx300m 启动的只允许使用小内存，并且修改服务源码内的AllowResponseBigWKT=true，否则只允许输出最大20M的WKT数据。";
 		
 		System.out.println(Desc);

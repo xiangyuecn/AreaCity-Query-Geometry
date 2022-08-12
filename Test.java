@@ -64,7 +64,7 @@ public class Test {
 		System.out.println("Init_StoreInWkbsFile：用加载数据到结构化数据文件的模式进行初始化，推荐使用本方法初始化，边界图形数据存入结构化数据文件中，内存占用很低，查询时会反复读取文件对应内容，查询性能消耗主要在IO上，IO性能极高问题不大。");
 		System.out.println("Init_StoreInMemory：用加载数据到内存的模式进行初始化，边界图形数据存入内存中，内存占用和json数据文件大小差不多大，查询性能极高；另外可通过设置 AreaCityQuery.SetInitStoreInMemoryUseObject=true 来进一步提升性能，但内存占用会增大一倍多。");
 		System.out.println(HR);
-		System.out.println("首次初始化会从.json或.geojson文件中读取边界图形数据，速度比较慢，会自动生成.wkbs结尾的结构化文件，下次初始化就很快了。");
+		System.out.println("首次初始化会从.json或.geojson文件中读取边界图形数据，并生成.wkbs结尾的结构化文件，速度比较慢（文件读写）；下次会直接从.wkbs文件进行初始化（文件只读不写），就很快了，可copy此.wkbs文件到别的地方使用（比如服务器、只读环境中）。");
 		System.out.println("  - 如果.wkbs文件已存在并且有效，将优先从wkbs文件中读取数据，速度很快。");
 		System.out.println("  - 你可以在当前目录内放入 .json|.geojson|.wkbs 文件(utf-8)，可通过菜单进行选择初始化，否则需要输入文件路径。");
 		System.out.println("  - 当前目录："+new File("").getAbsolutePath());
@@ -488,6 +488,7 @@ public class Test {
 	
 	static void Query_Point() throws Exception {
 		System.out.println("========== 查询一个坐标点对应的省市区乡镇数据 ==========");
+		System.out.println("注意：输入坐标参数的坐标系必须和初始化时使用的geojson数据的坐标系一致，否则坐标可能会有比较大的偏移，导致查询结果不正确。");
 		System.out.println("请输入一个坐标点，格式：\"lng lat\"（允许有逗号）：");
 		System.out.println("  - 比如：114.044346 22.691963，为广东省 深圳市 龙华区");
 		System.out.println("  - 比如：117.286491 30.450399，为安徽省 铜陵市 郊区，在池州市 贵池区的飞地");
