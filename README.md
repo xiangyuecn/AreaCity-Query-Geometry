@@ -29,7 +29,7 @@ Test_HttpApiServer.java|可选|测试用的HTTP API服务实现（可以删除�
 Test.java|可选|测试控制台程序，包含了所有功能的测试，包括启动HTTP API服务；<br>双击 `编译和运行Test.java直接测试.bat` 即可直接编译和运行此控制台程序（需装了jdk）。
 
 
-**如需功能定制，网站、App、小程序开发等需求，请加下面的QQ群，联系群主（即作者），谢谢~**
+**如需功能定制，网站、App、小程序、前端后端开发等需求，请加下面的QQ群，联系群主（即作者），谢谢~**
 
 
 [​](?)
@@ -38,7 +38,7 @@ Test.java|可选|测试控制台程序，包含了所有功能的测试，包括
 
 ## 【QQ群】交流与支持
 
-欢迎加QQ群：484560085，纯小写口令：`areacity`
+欢迎加QQ群：①群 484560085、②群 626141661，纯小写口令：`areacity`
 
 <img src="https://xiangyuecn.gitee.io/areacity-jsspider-statsgov/assets/qq_group_484560085.png" width="220px">
 
@@ -91,10 +91,12 @@ Test.java|可选|测试控制台程序，包含了所有功能的测试，包括
 ``` java
 //先初始化，全局只会初始化一次，每次查询前都调用即可（查询会在初始化完成后进行），两种初始化方式根据自己业务情况二选一
 //首次初始化会从.json或.geojson文件中读取边界图形数据，速度比较慢，会自动生成.wkbs结尾的结构化文件，下次初始化就很快了
+//首次初始化生成了.wkbs文件后，后续初始化可以只使用此wkbs文件，允许不用再提供geojson文件（数据更新时需删除wkbs文件再重新用geojson文件进行初始化），具体请阅读对应初始化方法的注释文档
 AreaCityQuery.Init_StoreInWkbsFile("geojson文件路径", "geojson文件路径.wkbs", true);
 //AreaCityQuery.Init_StoreInMemory("geojson文件路径", "geojson文件路径.wkbs", true);
 
 //AreaCityQuery.OnInitProgress=(initInfo)->{ ... } //初始化过程中的回调，可以绑定一个函数，接收初始化进度信息
+System.out.println(AreaCityQuery.GetInitInfo().toString()); //打印初始化详细信息，包括性能信息
 
 //注意：以下查询中所有坐标参数的坐标系必须和初始化时使用的geojson数据的坐标系一致，否则坐标可能会有比较大的偏移，导致查询结果不正确
 //查询包含一个坐标点的所有边界图形的属性数据，可通过res参数让查询额外返回wkt格式边界数据
@@ -113,11 +115,19 @@ System.out.println(res1+"\n"+res2+"\n"+res3);
 //****更多功能方法，请阅读 AreaCityQuery.java 源码****
 ```
 
+### 附：Java调用时如何同时开启多个实例
+同一个Java进程内，一个`AreaCityQuery`类只能初始化成一个实例（多开多个Java进程本身就是多个实例，无需特别处理）。
+
+如果你想要同时使用多个不同的geojson文件进行初始化，只需要提供多个`AreaCityQuery`类，即可同时开启多个实例，**有两种方法：**
+- 使用多个不同包名：包内直接copy `AreaCityQuery.java`进去改好包名，比如：`com.aa.AreaCityQuery`、`com.bb.AreaCityQuery`，这样就可以用不同包下面的`AreaCityQuery`类分别进行初始化，多个实例互不干扰。
+- 使用多个不同类名：同一个包下，将`AreaCityQuery.java`改名成不同的类，比如：`com.aa.AreaCityQuery1`、`com.aa.AreaCityQuery2`，这样就可以通过`AreaCityQuery1`、`AreaCityQuery2`类分别进行初始化，多个实例互不干扰。
+
+
 [​](?)
 
 ### 附：.wkbs文件说明
 初始化时如果提供了`saveWkbsFilePath`参数（为.wkbs结构化文件的路径）：
-- 如果此文件已存在，将自动从此文件进行初始化，初始化速度会很快（文件只读不写）；
+- 如果此文件已存在，将自动从此文件进行初始化，初始化速度会很快（文件只读不写，可以不提供geojson文件）；
 - 如果此文件不存在，将从.json或.geojson文件中读取边界图形数据，并生成此文件，速度比较慢（文件读写）。
 
 因此可以先在本地用json文件进行初始化，自动生成一个wkbs文件，然后copy wkbs文件到别的地方使用（比如服务器、只读环境中）。

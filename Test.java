@@ -9,6 +9,7 @@ import java.util.Random;
 
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Geometry;
+import org.locationtech.jts.io.WKTReader;
 
 import com.github.xiangyuecn.areacity.query.AreaCityQuery.Func;
 import com.github.xiangyuecn.areacity.query.AreaCityQuery.QueryInitInfo;
@@ -25,7 +26,31 @@ public class Test {
 		//【请在这里编写你自己的测试代码】
 		
 		Start(args);
-		
+		/* 解开这个注释，要注释掉上面这行代码
+		String jsonFile="仅供测试-全国省级GeoJSON数据-大幅简化粗略版.json";
+		//先初始化，全局只会初始化一次，每次查询前都调用即可（查询会在初始化完成后进行），两种初始化方式根据自己业务情况二选一
+		//首次初始化会从.json或.geojson文件中读取边界图形数据，速度比较慢，会自动生成.wkbs结尾的结构化文件，下次初始化就很快了
+		//首次初始化生成了.wkbs文件后，后续初始化可以只使用此wkbs文件，允许不用再提供geojson文件（数据更新时需删除wkbs文件再重新用geojson文件进行初始化），具体请阅读对应初始化方法的注释文档
+		AreaCityQuery.Init_StoreInWkbsFile(jsonFile, jsonFile+".wkbs", true);
+		//AreaCityQuery.Init_StoreInMemory("geojson文件路径", "geojson文件路径.wkbs", true);
+
+		//AreaCityQuery.OnInitProgress=(initInfo)->{ ... } //初始化过程中的回调，可以绑定一个函数，接收初始化进度信息
+		System.out.println(AreaCityQuery.GetInitInfo().toString()); //打印初始化详细信息，包括性能信息
+
+		//注意：以下查询中所有坐标参数的坐标系必须和初始化时使用的geojson数据的坐标系一致，否则坐标可能会有比较大的偏移，导致查询结果不正确
+		//查询包含一个坐标点的所有边界图形的属性数据，可通过res参数让查询额外返回wkt格式边界数据
+		QueryResult res1=AreaCityQuery.QueryPoint(114.044346, 22.691963, null, null);
+
+		//查询和一个图形（点、线、面）有交点的所有边界图形的属性数据，可通过res参数让查询额外返回wkt格式边界数据
+		Geometry geom=new WKTReader(AreaCityQuery.Factory).read("LINESTRING(114.233963 30.546038, 114.468109 30.544264)");
+		QueryResult res2=AreaCityQuery.QueryGeometry(geom, null, null);
+
+		//读取省市区的边界数据wkt格式，这个例子会筛选出武汉市所有区县
+		QueryResult res3=AreaCityQuery.ReadWKT_FromWkbsFile("wkt_polygon", null, (prop)->{return prop.contains("武汉市 ");}, null);
+
+
+		System.out.println(res1+"\n"+res2+"\n"+res3);
+		*/
 	}
 	
 	
