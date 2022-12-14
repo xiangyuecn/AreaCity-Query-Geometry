@@ -15,18 +15,18 @@
 
 [​](?)
 
-你可以只copy `AreaCityQuery.java` 文件到你的项目中使用（建好package目录或者修改一下package），项目中引入`jts库`，就能使用 `AreaCityQuery` 中的所有查找功能了。也可以clone整个项目代码双击 `编译和运行Test.java直接测试.bat` 即可直接运行测试（Mac需自己用javac进行编译运行）。
+你可以只copy `AreaCityQuery.java` 文件到你的项目中使用（建好package目录或者修改一下package），项目中引入`jts库`，就能使用 `AreaCityQuery` 中的所有查找功能了。也可以clone整个项目代码双击 `编译和运行Test.java直接测试.bat` 即可直接运行测试（macOS、linux用终端运行`.sh`的）。
 
 **API和图形界面**：本工具已自带了一个HTTP API服务，运行测试然后通过菜单启动此服务，然后就可以直接在浏览器上访问这些接口；此API接口可以直接在 [ECharts Map四级下钻在线测试和预览](https://xiangyuecn.gitee.io/areacity-jsspider-statsgov/assets/geo-echarts.html) 页面的`自定义数据源`中进行调用测试，页面会立即绘制查询出来的边界图形。
 
 [​](?)
 
-源文件|是否必须|说明
+源文件|必须|说明
 :-:|:-:|:-
 **AreaCityQuery.java**|必须|核心功能类，封装了所有核心功能，支持从`geojson`文件初始化。
 **jts-core-1.18.2.jar**|必须|唯一依赖的jts库，从[maven此链接](https://mvnrepository.com/artifact/org.locationtech.jts/jts-core/1.18.2)下载来的；<br>如需在pom.xml中引入，请参考maven链接页面内xml代码。
 Test_HttpApiServer.java|可选|测试用的HTTP API服务实现（可以删除此文件，不影响Test.java运行）。
-Test.java|可选|测试控制台程序，包含了所有功能的测试，包括启动HTTP API服务；<br>双击 `编译和运行Test.java直接测试.bat` 即可直接编译和运行此控制台程序（需装了jdk）。
+Test.java|可选|测试控制台程序，包含了所有功能的测试，包括启动HTTP API服务；<br>双击 `编译和运行Test.java直接测试.bat` 即可直接编译和运行此控制台程序（需装了jdk，macOS、linux用终端运行`.sh`的）。
 
 
 **如需功能定制，网站、App、小程序、前端后端开发等需求，请加下面的QQ群，联系群主（即作者），谢谢~**
@@ -59,7 +59,7 @@ Test.java|可选|测试控制台程序，包含了所有功能的测试，包括
 ## 如何使用
 
 ### 前期准备：生成GeoJSON文件
-程序初始化时，需要提供一个geojson文件（.json|.geojson），如果你没有此文件，可以按以下步骤获得最新的全国省市区县乡镇边界数据json文件：
+程序初始化时，需要提供一个geojson文件（.json|.geojson **里面数据必须是一行一条**），如果你没有此文件，可以按以下步骤获得最新的全国省市区县乡镇边界数据json文件：
 1. 请到开源库下载省市区边界数据ok_geo.csv文件: https://github.com/xiangyuecn/AreaCity-JsSpider-StatsGov （github可换成gitee）；
 2. 下载开源库里面的“AreaCity-Geo格式转换工具软件”；
 3. 打开转换工具软件，选择ok_geo.csv，然后导出成geojson文件即可（默认会导出全国的省级数据，通过填写不同城市名前缀可以导出不同城市）。
@@ -75,7 +75,7 @@ Test.java|可选|测试控制台程序，包含了所有功能的测试，包括
 
 ### 使用方式一：通过HTTP API服务使用
 操作步骤：
-1. 双击 `编译和运行Test.java直接测试.bat` 运行测试控制台程序；
+1. 双击 `编译和运行Test.java直接测试.bat` 运行测试控制台程序（macOS、linux用终端运行`.sh`的）；
 2. 根据控制台菜单命令进行初始化（需先把一个geojson文件放本程序目录内，否则要输入路径）；
 3. 进入9号菜单，启动本地轻量HTTP API服务（编辑 Test.java 文件内的`HttpApiServerPort`可修改端口）；
 4. 浏览器访问：`http://127.0.0.1:9527/` 查看接口文档；
@@ -95,7 +95,7 @@ Test.java|可选|测试控制台程序，包含了所有功能的测试，包括
 AreaCityQuery.Init_StoreInWkbsFile("geojson文件路径", "geojson文件路径.wkbs", true);
 //AreaCityQuery.Init_StoreInMemory("geojson文件路径", "geojson文件路径.wkbs", true);
 
-//AreaCityQuery.OnInitProgress=(initInfo)->{ ... } //初始化过程中的回调，可以绑定一个函数，接收初始化进度信息
+//AreaCityQuery.OnInitProgress=(initInfo)->{ ... } //初始化过程中的回调，可以绑定一个函数，接收初始化进度信息（编写时需在Init之前进行绑定）
 System.out.println(AreaCityQuery.GetInitInfo().toString()); //打印初始化详细信息，包括性能信息
 
 //注意：以下查询中所有坐标参数的坐标系必须和初始化时使用的geojson数据的坐标系一致，否则坐标可能会有比较大的偏移，导致查询结果不正确
@@ -109,9 +109,14 @@ QueryResult res2=AreaCityQuery.QueryGeometry(geom, null, null);
 
 //读取省市区的边界数据wkt格式，这个例子会筛选出武汉市所有区县
 QueryResult res3=AreaCityQuery.ReadWKT_FromWkbsFile("wkt_polygon", null, (prop)->{return prop.contains("武汉市 ");}, null);
+//此方法会遍历所有边界图形的属性列表，因此可以用来遍历所有数据，提取感兴趣的属性内容，比如查询一个区划编号id对应的城市信息（城市名称、中心点）
+QueryResult res4=AreaCityQuery.ReadWKT_FromWkbsFile(null, null, (prop)->{
+    prop=(","+prop.substring(1, prop.length()-1)+",").replace("\"", "").replace(" ", ""); //不解析json，简单处理
+    return prop.contains(",id:42,"); //只查询出id=42（湖北省）的属性数据（注意初始化的geojson中必须要有对应的属性名，这里是id）
+}, null);
 
 
-System.out.println(res1+"\n"+res2+"\n"+res3);
+System.out.println(res1+"\n"+res2+"\n"+res3+"\n"+res4);
 //****更多的实例，请阅读 Test.java****
 //****更多功能方法，请阅读 AreaCityQuery.java 源码****
 ```
@@ -122,6 +127,9 @@ System.out.println(res1+"\n"+res2+"\n"+res3);
 如果你想要同时使用多个不同的geojson文件进行初始化，只需要提供多个`AreaCityQuery`类，即可同时开启多个实例，**有两种方法：**
 - 使用多个不同包名：包内直接copy `AreaCityQuery.java`进去改好包名，比如：`com.aa.AreaCityQuery`、`com.bb.AreaCityQuery`，这样就可以用不同包下面的`AreaCityQuery`类分别进行初始化，多个实例互不干扰。
 - 使用多个不同类名：同一个包下，将`AreaCityQuery.java`改名成不同的类，比如：`com.aa.AreaCityQuery1`、`com.aa.AreaCityQuery2`，这样就可以通过`AreaCityQuery1`、`AreaCityQuery2`类分别进行初始化，多个实例互不干扰。
+
+### 附：关于Java程序打包发布
+本程序只支持从文件路径进行初始化，所以请将数据文件放到一个磁盘目录内，不要打包进jar中；如果是docker发布，可以在dockerfile中将数据文件copy进docker镜像内的目录中。
 
 
 [​](?)

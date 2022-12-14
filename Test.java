@@ -34,7 +34,7 @@ public class Test {
 		AreaCityQuery.Init_StoreInWkbsFile(jsonFile, jsonFile+".wkbs", true);
 		//AreaCityQuery.Init_StoreInMemory("geojson文件路径", "geojson文件路径.wkbs", true);
 
-		//AreaCityQuery.OnInitProgress=(initInfo)->{ ... } //初始化过程中的回调，可以绑定一个函数，接收初始化进度信息
+		//AreaCityQuery.OnInitProgress=(initInfo)->{ ... } //初始化过程中的回调，可以绑定一个函数，接收初始化进度信息（编写时需在Init之前进行绑定）
 		System.out.println(AreaCityQuery.GetInitInfo().toString()); //打印初始化详细信息，包括性能信息
 
 		//注意：以下查询中所有坐标参数的坐标系必须和初始化时使用的geojson数据的坐标系一致，否则坐标可能会有比较大的偏移，导致查询结果不正确
@@ -48,9 +48,14 @@ public class Test {
 
 		//读取省市区的边界数据wkt格式，这个例子会筛选出武汉市所有区县
 		QueryResult res3=AreaCityQuery.ReadWKT_FromWkbsFile("wkt_polygon", null, (prop)->{return prop.contains("武汉市 ");}, null);
+		//此方法会遍历所有边界图形的属性列表，因此可以用来遍历所有数据，提取感兴趣的属性内容，比如查询一个区划编号id对应的城市信息（城市名称、中心点）
+		QueryResult res4=AreaCityQuery.ReadWKT_FromWkbsFile(null, null, (prop)->{
+			prop=(","+prop.substring(1, prop.length()-1)+",").replace("\"", "").replace(" ", ""); //不解析json，简单处理
+			return prop.contains(",id:42,"); //只查询出id=42（湖北省）的属性数据（注意初始化的geojson中必须要有对应的属性名，这里是id）
+		}, null);
 
 
-		System.out.println(res1+"\n"+res2+"\n"+res3);
+		System.out.println(res1+"\n"+res2+"\n"+res3+"\n"+res4);
 		*/
 	}
 	
