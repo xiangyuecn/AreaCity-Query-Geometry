@@ -10,7 +10,7 @@
 - 查询一个城市或下一级所有边界数据（WKT格式）；
 - 支持通过HTTP API服务进行查询调用；
 - 支持通过Java代码进行查询调用；
-- 源码简单，包括测试bat脚本共5个文件，无需IDE即可修改和运行，copy即用。
+- 源码简单，包括测试`.bat|.sh`脚本共5个文件，无需IDE即可修改和运行，copy即用。
 
 
 [​](?)
@@ -21,7 +21,7 @@
 
 [​](?)
 
-源文件|必须|说明
+源文件|是否必须|说明
 :-:|:-:|:-
 **AreaCityQuery.java**|必须|核心功能类，封装了所有核心功能，支持从`geojson`文件初始化。
 **jts-core-1.18.2.jar**|必须|唯一依赖的jts库，从[maven此链接](https://mvnrepository.com/artifact/org.locationtech.jts/jts-core/1.18.2)下载来的；<br>如需在pom.xml中引入，请参考maven链接页面内xml代码。
@@ -59,9 +59,9 @@ Test.java|可选|测试控制台程序，包含了所有功能的测试，包括
 ## 如何使用
 
 ### 前期准备：生成GeoJSON文件
-程序初始化时，需要提供一个geojson文件（.json|.geojson **里面数据必须是一行一条**），如果你没有此文件，可以按以下步骤获得最新的全国省市区县乡镇边界数据json文件：
+程序初始化时，需要提供一个geojson文件（.json|.geojson **里面数据必须是一行一条数据**），如果你没有此文件，可以按以下步骤获得最新的全国省市区县乡镇边界数据json文件：
 1. 请到开源库下载省市区边界数据ok_geo.csv文件: https://github.com/xiangyuecn/AreaCity-JsSpider-StatsGov （github可换成gitee）；
-2. 下载开源库里面的“AreaCity-Geo格式转换工具软件”；
+2. 下载开源库里面的`AreaCity-Geo格式转换工具软件`；
 3. 打开转换工具软件，选择ok_geo.csv，然后导出成geojson文件即可（默认会导出全国的省级数据，通过填写不同城市名前缀可以导出不同城市）。
 
 > 如果你有多个小的geojson文件，需要合并成一个才行，可以通过上面下载的 `AreaCity-Geo格式转换工具软件` 中的 `高级功能`-`GeoJSON多个文件合并成一个文件` 来合并。
