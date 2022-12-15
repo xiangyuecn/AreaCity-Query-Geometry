@@ -194,6 +194,7 @@ public class AreaCityQuery {
 	/**
 	 * 遍历所有边界图形的属性列表查询出符合条件的属性，然后返回图形的属性+边界图形WKT文本。
 	 * <br>读取到的wkt文本，可以直接粘贴到页面内渲染显示：https://xiangyuecn.gitee.io/areacity-jsspider-statsgov/assets/geo-echarts.html
+	 * <br>本方法可以用来遍历所有数据，提取感兴趣的属性内容（wktKey传null只返回属性），比如查询一个区划编号id对应的城市信息（城市名称、中心点）
 	 * 
 	 * <br>
 	 * <br>注意：初始化时必须保存了wkbs结构化数据文件，或者用的wkbs文件初始化的，否则不允许查询WKT数据。
@@ -388,8 +389,11 @@ public class AreaCityQuery {
 	 * 用加载数据到内存的模式进行初始化，边界图形数据存入内存中（内存占用和json数据文件大小差不多大，查询性能极高），本方法可以反复调用但只会初始化一次
 	 * <pre>
 	 * 支持文件(utf-8)：
-	 *  - *.wkbs saveWkbsFilePath生成的结构化数据文件，读取效率高
-	 *  - *.json geojson文件，要求一个边界必须一行数据
+	 *  - *.wkbs saveWkbsFilePath生成的结构化数据文件，读取效率高。
+	 *  - *.json geojson文件，要求里面数据必须是一行一条数据
+	 *                     ，第一条数据的上一行必须是`"features": [`
+	 *                     ，最后一条数据的下一行必须是`]`打头
+	 *                     ，否则不支持解析，可尝试用文本编辑器批量替换添加换行符。
 	 * </pre>
 	 * 默认在内存中存储的是wkb格式数据（大幅减少内存占用），查询时会将wkb还原成图形对象，可通过设置 AreaCityQuery.SetInitStoreInMemoryUseObject=true 来关闭这一过程减少性能损耗，在内存中直接存储图形对象，但内存占用会增大一倍多。
 	 * 
@@ -404,8 +408,11 @@ public class AreaCityQuery {
 	 * 用加载数据到结构化数据文件的模式进行初始化，推荐使用本方法初始化，边界图形数据存入结构化数据文件中，内存占用很低（查询时会反复读取文件对应内容，查询性能消耗主要在IO上，IO性能极高问题不大），本方法可以反复调用但只会初始化一次
 	 * <pre>
 	 * 支持文件(utf-8)：
-	 *  - *.wkbs saveWkbsFilePath生成的结构化数据文件，读取效率高
-	 *  - *.json geojson文件，要求一个边界必须一行数据
+	 *  - *.wkbs saveWkbsFilePath生成的结构化数据文件，读取效率高。
+	 *  - *.json geojson文件，要求里面数据必须是一行一条数据
+	 *                     ，第一条数据的上一行必须是`"features": [`
+	 *                     ，最后一条数据的下一行必须是`]`打头
+	 *                     ，否则不支持解析，可尝试用文本编辑器批量替换添加换行符。
 	 * </pre>
 	 * 
 	 * @param dataFilePath 数据文件路径（支持：*.wkbs、*.json），从这个文件读取数据；如果autoUseExistsWkbsFile=true并且saveWkbsFilePath文件存在时（已生成了结构化数据文件），可以不提供此参数
@@ -598,6 +605,10 @@ public class AreaCityQuery {
 		HashMap<String, ArrayList<Integer>> lineSubsPos=new HashMap<>();
 		
 		boolean isWkbsFile=IsWkbsFilePath(dataFilePath);
+		String IsStartErrMsg="未识别到geojson|wkbs数据，请检查初始化传入的文件是否正确。"
+					+"注意：如果是geojson文件，要求里面数据必须是一行一条数据"
+					+"，第一条数据的上一行必须是`\"features\": [`，最后一条数据的下一行必须是`]`打头"
+					+"，否则不支持解析，可尝试用文本编辑器批量替换添加换行符。";
 		boolean[] IsStart=new boolean[] { false };
 		boolean[] IsEnd=new boolean[] { false };
 		int[] LineNo=new int[] { 0 };
@@ -630,6 +641,9 @@ public class AreaCityQuery {
 						InitInfo.DurationN_FileRead+=System.nanoTime()-t_fr;
 						if(line==null) {
 							//没有数据了
+							if(!IsStart[0]){
+								throw new Exception(IsStartErrMsg);
+							}
 							if(!IsEnd[0]){
 								throw new Exception("初始化传入的文件未发现结束位置，可能文件已损坏");
 							}
@@ -915,7 +929,7 @@ public class AreaCityQuery {
 		}
 		
 		if(!IsStart[0]){
-			throw new Exception("未识别到geojson|wkbs数据，请检查初始化传入的文件是否正确");
+			throw new Exception(IsStartErrMsg);
 		}
 		if(InitInfo.GeometryCount==0){
 			throw new Exception("初始化传入的文件内没有数据");
