@@ -736,6 +736,11 @@ public class Test {
 			if(byt=='\n') {
 				break;
 			}
+			if(in.size()>=2048) {//防止内存溢出，某些环境下可能会有无限的输入
+				byte[] bytes=in.toByteArray();
+				in=new ByteArrayOutputStream();
+				in.write(bytes, bytes.length-1024, 1024);
+			}
 			in.write(byt);
 		}
 		return in.toString();
