@@ -106,7 +106,7 @@ System.out.println(AreaCityQuery.GetInitInfo().toString()); //打印初始化详
 QueryResult res1=AreaCityQuery.QueryPoint(114.044346, 22.691963, null, null);
 
 //查询和一个图形（点、线、面）有交点的所有边界图形的属性数据，可通过res参数让查询额外返回wkt格式边界数据
-Geometry geom=new WKTReader(AreaCityQuery.Factory).read("LINESTRING(114.233963 30.546038, 114.468109 30.544264)");
+Geometry geom=new WKTReader(AreaCityQuery.Factory).read("LINESTRING(114.30115 30.57962, 117.254285 31.824198, 118.785633 32.064869)");
 QueryResult res2=AreaCityQuery.QueryGeometry(geom, null, null);
 
 //读取省市区的边界数据wkt格式，这个例子会筛选出武汉市所有区县
@@ -131,7 +131,7 @@ System.out.println(res1+"\n"+res2+"\n"+res3+"\n"+res4);
 - 使用多个不同类名：同一个包下，将`AreaCityQuery.java`改名成不同的类，比如：`com.aa.AreaCityQuery1`、`com.aa.AreaCityQuery2`，这样就可以通过`AreaCityQuery1`、`AreaCityQuery2`类分别进行初始化，多个实例互不干扰。
 
 ### 附：关于Java程序打包发布
-本程序只支持从文件路径进行初始化，所以请将数据文件放到一个磁盘目录内，不要打包进jar中；如果是docker发布，可以在dockerfile中将数据文件copy进docker镜像内的目录中。
+本程序只支持从文件路径进行初始化，所以请将数据文件放到一个磁盘目录内，不要打包进jar中；如果是docker发布，可以在dockerfile中用VOLUME映射宿主机目录、或直接将数据文件copy进docker镜像内的目录中。
 
 
 [​](?)

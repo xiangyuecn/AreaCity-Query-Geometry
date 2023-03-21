@@ -72,6 +72,7 @@ public class AreaCityQuery {
 	 * @param res 可以为null，如果提供结果对象，可通过此对象的Set_XXX属性控制某些查询行为，比如设置Set_ReturnWKTKey可以额外返回边界的WKT文本数据；并且本次查询的结果和统计数据将累加到这个结果内（性能测试用）。注意：此结果对象非线程安全
 	 */
 	static public QueryResult QueryPoint(double lng, double lat, Func<String,Boolean> where, QueryResult res) throws Exception{
+		CheckInitIsOK();
 		return QueryGeometry(Factory.createPoint(new Coordinate(lng, lat)), where, res);
 	}
 	
@@ -87,12 +88,7 @@ public class AreaCityQuery {
 	 * @param res 可以为null，如果提供结果对象，可通过此对象的Set_XXX属性控制某些查询行为，比如设置Set_ReturnWKTKey可以额外返回边界的WKT文本数据；并且本次查询的结果和统计数据将累加到这个结果内（性能测试用）。注意：此结果对象非线程安全
 	 */
 	static public QueryResult QueryGeometry(Geometry geom, Func<String,Boolean> where, QueryResult res) throws Exception{
-		if(GetInitStatus()==3) {
-			throw new Exception(InitInfo.ErrMsg);
-		}
-		if(GetInitStatus()!=2) {
-			throw new Exception("需要先Init完成后，再来进行查询调用");
-		}
+		CheckInitIsOK();
 		if(res==null) res=new QueryResult();
 		res.QueryCount++;
 		long t_Start=System.nanoTime();
@@ -207,12 +203,7 @@ public class AreaCityQuery {
 	 * @param onFind 可选提供一个回调函数，每次查询到一条wkt数据后会通过onFind回传，String[]参数为[prop,wkt]；如果返回false数据将不会存入res结果中（也会忽略wktKey参数），需在回调中自行处理数据
 	 */
 	static public QueryResult ReadWKT_FromWkbsFile(String wktKey, QueryResult res, Func<String,Boolean> where, Func<String[], Boolean> onFind) throws Exception{
-		if(GetInitStatus()==3) {
-			throw new Exception(InitInfo.ErrMsg);
-		}
-		if(GetInitStatus()!=2) {
-			throw new Exception("需要先Init完成后，再来进行查询调用");
-		}
+		CheckInitIsOK();
 		if(res==null) res=new QueryResult();
 		res.QueryCount++;
 		long t_Start=System.nanoTime();
@@ -296,12 +287,7 @@ public class AreaCityQuery {
 	 * @param onFind 可选提供一个回调函数，每次查询到一条wkt数据后会通过onFind回传，String[]参数为[prop,wkt]；如果返回false数据将不会存入res结果中（也会忽略wktKey参数），需在回调中自行处理数据
 	 */
 	static public QueryResult Debug_ReadGeometryGridSplitsWKT(String wktKey, QueryResult res, Func<String,Boolean> where, Func<String[], Boolean> onFind) throws Exception {
-		if(GetInitStatus()==3) {
-			throw new Exception(InitInfo.ErrMsg);
-		}
-		if(GetInitStatus()!=2) {
-			throw new Exception("需要先Init完成后，再来进行查询调用");
-		}
+		CheckInitIsOK();
 		if(res==null) res=new QueryResult();
 		res.QueryCount++;
 		long t_Start=System.nanoTime();
@@ -450,6 +436,15 @@ public class AreaCityQuery {
 	 */
 	static public int GetInitStatus() {
 		return InitLock[0];
+	}
+	/** 检查init状态是否是2已初始化完成，未完成会抛出错误原因 **/
+	static public void CheckInitIsOK() throws Exception {
+		if(InitLock[0]==3) {
+			throw new Exception(InitInfo.ErrMsg);
+		}
+		if(InitLock[0]!=2) {
+			throw new Exception("需要先Init完成后，再来进行查询调用");
+		}
 	}
 	/** 将init状态设置为0（未初始化），允许重新Init **/
 	static public void ResetInitStatus() {
@@ -660,7 +655,8 @@ public class AreaCityQuery {
 						}
 						if(!IsStart[0]){
 							//等待开始标志
-							if(line.indexOf("\"features\"")==0){
+							int fIdx=line.indexOf("\"features\"");
+							if(fIdx==0 || fIdx>0 && fIdx>=line.length()-14){
 								if(!line.endsWith("[")){
 									throw new Exception("初始化传入的文件第"+lineNo+"行风格不对，不支持处理此文件");
 								}
@@ -1077,7 +1073,7 @@ public class AreaCityQuery {
 	
 	
 	/** 通用回调接口 **/
-	interface Func<iT, oT> { oT Exec(iT val) throws Exception; }
+	public interface Func<iT, oT> { oT Exec(iT val) throws Exception; }
 	
 	
 	

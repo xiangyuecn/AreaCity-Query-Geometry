@@ -43,7 +43,7 @@ public class Test {
 		QueryResult res1=AreaCityQuery.QueryPoint(114.044346, 22.691963, null, null);
 
 		//查询和一个图形（点、线、面）有交点的所有边界图形的属性数据，可通过res参数让查询额外返回wkt格式边界数据
-		Geometry geom=new WKTReader(AreaCityQuery.Factory).read("LINESTRING(114.233963 30.546038, 114.468109 30.544264)");
+		Geometry geom=new WKTReader(AreaCityQuery.Factory).read("LINESTRING(114.30115 30.57962, 117.254285 31.824198, 118.785633 32.064869)");
 		QueryResult res2=AreaCityQuery.QueryGeometry(geom, null, null);
 
 		//读取省市区的边界数据wkt格式，这个例子会筛选出武汉市所有区县
@@ -555,6 +555,38 @@ public class Test {
 		}
 	}
 	
+	static void Query_Geometry() throws Exception {
+		System.out.println("========== 查询和任意一个几何图形相交的省市区乡镇数据 ==========");
+		System.out.println("注意：输入WKT的坐标系必须和初始化时使用的geojson数据的坐标系一致，否则坐标可能会有比较大的偏移，导致查询结果不正确。");
+		System.out.println("请输入一个WKT文本（Well Known Text）：");
+		System.out.println("  - 比如：POINT(114.044346 22.691963)，坐标点，为广东省 深圳市 龙华区");
+		System.out.println("  - 比如：LINESTRING(114.30115 30.57962, 117.254285 31.824198, 118.785633 32.064869)，路径线段，武汉-合肥-南京 三个点连成的线段");
+		System.out.println("  - 比如：POLYGON((113.305514 30.564249, 113.305514 32.881526, 117.326510 32.881526, 117.326510 30.564249, 113.305514 30.564249))，范围，湖北-河南-安徽 三省交界的一个超大矩形范围");
+		System.out.println("  - 输入 exit 退出查询");
+		while(true){
+			System.out.print("> ");
+			String inStr=ReadIn().trim();
+			if(inStr.length()==0) {
+				System.out.println("输入为空，请重新输入！如需退出请输入exit");
+				continue;
+			}
+			if(inStr.equals("exit")) {
+				System.out.println("bye! 已退出查询。");
+				System.out.println();
+				return;
+			}
+			Geometry geom;
+			try {
+				geom=new WKTReader(AreaCityQuery.Factory).read(inStr);
+			}catch(Exception e) {
+				System.out.println("输入的WKT解析失败："+e.getMessage());
+				continue;
+			}
+			QueryResult res=AreaCityQuery.QueryGeometry(geom, null, null);
+			System.out.println(res.toString());
+		}
+	}
+	
 	static void Read_WKT() throws Exception {
 		System.out.println("========== 读取省市区乡镇边界的WKT文本数据 ==========");
 		System.out.println("遍历所有边界图形的属性列表查询出符合条件的属性，然后返回图形的属性+边界图形WKT文本。 ");
@@ -772,6 +804,7 @@ public class Test {
 				System.out.println("5. 测试：多线程性能测试");
 				System.out.println(HR);
 				System.out.println("6. 查询: QueryPoint 查找坐标点所在省市区乡镇");
+				System.out.println("A. 查询: QueryGeometry 查找和图形相交的省市区乡镇");
 				System.out.println("7. 查询: ReadWKT 读取省市区乡镇边界的WKT文本数据");
 				System.out.println("8. 查询: Debug 读取边界网格划分图形WKT文本数据");
 				System.out.println(HR);
@@ -788,7 +821,7 @@ public class Test {
 			while(true) {
 				int byt=System.in.read();
 				inTxt+=(char)byt;
-				inTxt=inTxt.trim();
+				inTxt=inTxt.trim().toUpperCase();
 				
 				if(byt!='\n') {
 					continue;
@@ -812,6 +845,9 @@ public class Test {
 					} else if(isInit && inTxt.equals("6")) {
 						Query_Point();
 						waitAnyKey=false;
+					} else if(isInit && inTxt.equals("A")) {
+						Query_Geometry();
+						waitAnyKey=false;
 					} else if(isInit && inTxt.equals("7")) {
 						Read_WKT();
 						waitAnyKey=false;
@@ -822,7 +858,7 @@ public class Test {
 						if(StartHttpApiServer()) {
 							waitAnyKey=false;
 						}
-					} else if(inTxt.equals("exit")) {
+					} else if(inTxt.equals("EXIT")) {
 						System.out.println("bye!");
 						return;
 					} else {
