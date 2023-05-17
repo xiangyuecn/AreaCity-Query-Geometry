@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+#在Linux、macOS系统终端中运行这个文件，自动完成java文件编译和运行
 
 clear
 
@@ -16,7 +17,7 @@ function err(){ echo -e "\e[31m$1\e[0m"; }
 ${jdkBinDir}javac -version
 [ ! $? -eq 0 ] && { err "需要安装JDK才能编译运行java文件"; exit; }
 
-${jdkBinDir}javac -encoding utf-8 -cp ./*.jar *.java
+${jdkBinDir}javac -encoding utf-8 -cp "./*" *.java
 [ ! $? -eq 0 ] && { err "java文件编译失败"; exit; }
 
 dir="com/github/xiangyuecn/areacity/query"
@@ -28,7 +29,7 @@ fi
 mv *.class ${dir}
 
 echo "java -Xmx300m Test -cmd 已限制java最大允许使用300M内存"
-${jdkBinDir}java -cp ./:./* -Xmx300m com.github.xiangyuecn.areacity.query.Test -cmd
+${jdkBinDir}java -cp "./:./*" -Xmx300m com.github.xiangyuecn.areacity.query.Test -cmd
 
 
 

@@ -384,7 +384,7 @@ public class AreaCityQuery {
 	 * 默认在内存中存储的是wkb格式数据（大幅减少内存占用），查询时会将wkb还原成图形对象，可通过设置 AreaCityQuery.SetInitStoreInMemoryUseObject=true 来关闭这一过程减少性能损耗，在内存中直接存储图形对象，但内存占用会增大一倍多。
 	 * 
 	 * @param dataFilePath 数据文件路径（支持：*.wkbs、*.json），从这个文件读取数据；如果autoUseExistsWkbsFile=true并且saveWkbsFilePath文件存在时（已生成了结构化数据文件），可以不提供此参数
-	 * @param saveWkbsFilePath 可选提供一个.wkbs后缀的文件路径：dataFile是wkbs时不可以提供；dataFile是geojson时，加载geojson解析的数据会自动生成此结构化数据文件
+	 * @param saveWkbsFilePath 可选提供一个.wkbs后缀的文件路径：dataFile是wkbs时不可以提供；dataFile是geojson时，加载geojson解析的数据会自动生成此结构化数据文件；如果和dataFile都不提供wkbs文件时查询中将不允许获取WKT数据
 	 * @param autoUseExistsWkbsFile 当传true时：如果检测到saveWkbsFilePath对应文件已成功生成过了，将直接使用这个wkbs文件作为dataFile（直接忽略dataFilePath参数）；建议传true，这样只需要首次加载生成了结构文件，以后读取数据都非常快（数据更新时需删除wkbs文件）
 	 */
 	static public void Init_StoreInMemory(String dataFilePath, String saveWkbsFilePath, boolean autoUseExistsWkbsFile) {
@@ -547,6 +547,7 @@ public class AreaCityQuery {
 					}
 				}
 				InitInfo.DataFromWkbsFile=IsWkbsFilePath(dataFilePath);
+				InitInfo.HasWkbsFile=WkbsFilePath.length()>0;
 				InitInfo.OtherInfo.put("dataFilePath", dataFilePath);
 				InitInfo.OtherInfo.put("saveWkbsFilePath", saveWkbsFilePath);
 				
@@ -826,7 +827,7 @@ public class AreaCityQuery {
 						}
 						
 						byte[] wkb=null;
-						String wkbPos=null;//编号:parent:sub 数据存储位置
+						String wkbPos=lineNo+":0:0";//编号:parent:sub 数据存储位置
 						if(saveWkbsFile!=null) {//需要保存到文件
 							synchronized (saveWkbsFile) {
 								wkbPos=(saveWkbsFileLength[0]+1)+"";//+1 换行符
@@ -1399,6 +1400,8 @@ public class AreaCityQuery {
 		
 		/**初始化时的数据是否是从wkbs结构化数据文件中读取；如果为false可能代表还未生成过wkbs文件，首次初始化可能会很慢**/
 		public boolean DataFromWkbsFile;
+		/**初始化时是否使用或保存了wkbs结构化数据文件，没有wkbs文件时查询中不允许获取WKT数据**/
+		public boolean HasWkbsFile;
 		/**初始化失败时的错误消息**/
 		public String ErrMsg="";
 		

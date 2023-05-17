@@ -1,4 +1,5 @@
 @echo off
+::在Windows系统中双击运行这个文件，自动完成java文件编译和运行
 
 :Run
 cls
@@ -20,7 +21,7 @@ if errorlevel 1 (
 	goto Pause
 )
 
-%jdkBinDir%javac -encoding utf-8 -cp ./*.jar *.java
+%jdkBinDir%javac -encoding utf-8 -cp "./*" *.java
 if errorlevel 1 (
 	echo java文件编译失败
 	goto Pause
@@ -35,7 +36,7 @@ if not exist %dir% (
 move *.class %dir% > nul
 
 echo java -Xmx300m Test -cmd 已限制java最大允许使用300M内存
-%jdkBinDir%java -cp ./;./* -Xmx300m com.github.xiangyuecn.areacity.query.Test -cmd
+%jdkBinDir%java -cp "./;./*" -Xmx300m com.github.xiangyuecn.areacity.query.Test -cmd
 
 :Pause
 pause

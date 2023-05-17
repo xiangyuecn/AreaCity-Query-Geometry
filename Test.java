@@ -182,6 +182,14 @@ public class Test {
 		if(jsonFile.length()>0) {
 			initDataFile=new File(jsonFile).getAbsolutePath();
 			initSaveWkbsFile=initDataFile+".wkbs";
+			if(!storeInWkbsFile) {
+				System.out.println("用json文件进行Init_StoreInMemory初始化时，可选提供一个.wkbs后缀的文件路径，初始化时会自动生成此文件，如果不提供将不能查询WKT数据；直接回车提供，输入n不提供：");
+				System.out.print("> ");
+				String txt=ReadIn();
+				if(txt.toLowerCase().equals("n")) {
+					initSaveWkbsFile="";
+				}
+			}
 		} else if(wkbsFile.length()>0) {
 			initDataFile=new File(wkbsFile).getAbsolutePath();
 			initSaveWkbsFile="";
@@ -200,8 +208,10 @@ public class Test {
 				if(logTime==0) {
 					if(info.DataFromWkbsFile) {
 						System.out.println("正在从wkbs结构化数据文件中快速读取数据...");
-					} else {
+					} else if(info.HasWkbsFile){
 						System.out.println("首次运行，正在生成wkbs结构化数据文件，速度可能会比较慢...");
+					} else {
+						System.out.println("正在从json文件中读取数据，未提供wkbs文件，速度可能会比较慢...");
 					}
 				}
 				if(info.CurrentLine_No!=0) {
@@ -309,7 +319,12 @@ public class Test {
 			QueryResult res=new QueryResult();
 			for(int i=0;i<loop;i++) {
 				res.Result.clear();//清除一下上次的结果，只保留统计
-				res=AreaCityQuery.ReadWKT_FromWkbsFile("plygon_wkt", res, new Func<String, Boolean>() {
+				String wktKey="plygon_wkt";
+				if(!AreaCityQuery.GetInitInfo().HasWkbsFile) {
+					if(i==0)System.out.println("【注意】初始化时如果没有提供wkbs文件，不能查询wkt数据");
+					wktKey="";
+				}
+				res=AreaCityQuery.ReadWKT_FromWkbsFile(wktKey, res, new Func<String, Boolean>() {
 					@Override
 					public Boolean Exec(String prop) throws Exception {
 						return prop.contains("北京市 朝阳区\"")

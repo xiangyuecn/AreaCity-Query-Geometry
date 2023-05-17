@@ -15,7 +15,7 @@
 
 [​](?)
 
-你可以只copy `AreaCityQuery.java` 文件到你的项目中使用（建好package目录或者修改一下package），项目中引入`jts库`，就能使用 `AreaCityQuery` 中的所有查找功能了。也可以clone整个项目代码双击 `编译和运行Test.java直接测试.bat` 即可直接运行测试（macOS、linux用终端运行`.sh`的）。
+你可以只copy `AreaCityQuery.java` 文件到你的项目中使用（建好package目录或者修改一下package），项目中引入`jts库`，就能使用 `AreaCityQuery` 中的所有查找功能了。也可以clone整个项目代码双击 `编译和运行Test.java直接测试.bat` 即可直接运行测试（macOS、linux用终端运行`.sh`的）；`scripts`里面有生成jar包的命令行脚本。
 
 **API和图形界面**：本工具已自带了一个HTTP API服务，运行测试然后通过菜单启动此服务，然后就可以直接在浏览器上访问这些接口；此API接口可以直接在 [ECharts Map四级下钻在线测试和预览](https://xiangyuecn.gitee.io/areacity-jsspider-statsgov/assets/geo-echarts.html) 页面的`自定义数据源`中进行调用测试，页面会立即绘制查询出来的边界图形。
 
@@ -122,6 +122,9 @@ System.out.println(res1+"\n"+res2+"\n"+res3+"\n"+res4);
 //****更多的实例，请阅读 Test.java****
 //****更多功能方法，请阅读 AreaCityQuery.java 源码****
 ```
+
+### 附：生成jar包
+`scripts`目录里面有生成jar包的命令行脚本，双击`生成jar包.bat`即可将源码编译成jar文件（macOS、linux用终端运行`.sh`的）；脚本支持生成`带Test.java控制台程序`的、和`不带控制台程序`的两种jar，前者可以启动运行，后者可放到其他项目中用Java代码调用。
 
 ### 附：Java调用时如何同时开启多个实例
 同一个Java进程内，一个`AreaCityQuery`类只能初始化成一个实例（多开多个Java进程本身就是多个实例，无需特别处理）。
