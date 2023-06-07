@@ -6,6 +6,8 @@ import java.io.FileOutputStream;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Random;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Geometry;
@@ -41,6 +43,8 @@ public class Test {
 		//查询包含一个坐标点的所有边界图形的属性数据，可通过res参数让查询额外返回wkt格式边界数据
 		//查询结果的判定：请不要假定查询结果的数量（坐标刚好在边界上可能会查询出多个省市区），也不要假定查询结果顺序（结果中省市区顺序是乱序的），请检查判定res1.Result中的结果是否符合查询的城市级别，比如查询省市区三级：结果中必须且仅有3条数据，并且省市区都有（判断deep=0省|1市|2区 来区分数据的级别），其他一律判定为查询无效
 		QueryResult res1=AreaCityQuery.QueryPoint(114.044346, 22.691963, null, null);
+		//当坐标位于界线外侧（如海岸线、境界线）时QueryPoint方法将不会有边界图形能够匹配包含此坐标（就算距离只相差1cm），下面这个方法将能够匹配到附近不远的边界图形数据；2500相当于一个以此坐标为中心点、半径为2.5km的圆形范围，会查询出在这个范围内和此坐标点距离最近的边界
+		QueryResult res1_2=AreaCityQuery.QueryPointWithTolerance(121.993491, 29.524288, null, null, 2500);
 
 		//查询和一个图形（点、线、面）有交点的所有边界图形的属性数据，可通过res参数让查询额外返回wkt格式边界数据
 		Geometry geom=new WKTReader(AreaCityQuery.Factory).read("LINESTRING(114.30115 30.57962, 117.254285 31.824198, 118.785633 32.064869)");
@@ -55,7 +59,7 @@ public class Test {
 		}, null);
 
 
-		System.out.println(res1+"\n"+res2+"\n"+res3+"\n"+res4);
+		System.out.println(res1+"\n"+res1_2+"\n"+res2+"\n"+res3+"\n"+res4);
 		*/
 	}
 	
@@ -277,6 +281,24 @@ public class Test {
 				System.out.println(ResultHas(res, "龙华区\"")?"OK":"查询失败！");
 			}
 		}
+		
+		System.out.println();
+		System.out.println("========== QueryPointWithTolerance ==========");
+		{
+			QueryResult res=new QueryResult();
+			res.Set_EnvelopeHitResult=new ArrayList<>();
+			double lng=121.993491,lat=29.524288;
+			QueryResult res2=AreaCityQuery.QueryPoint(lng, lat, null, null);
+			for(int i=0;i<loop;i++) {
+				res.Result.clear();//清除一下上次的结果，只保留统计
+				res.Set_EnvelopeHitResult.clear();
+				res=AreaCityQuery.QueryPointWithTolerance(lng, lat, null, res, 2500);
+			}
+			System.out.println(res.toString());
+			if(HasDeep2) {
+				System.out.println(ResultHas(res, "象山县\"") && res2.Result.size()==0?"OK":"查询失败！");
+			}
+		}
 
 		System.out.println();
 		System.out.println("========== QueryGeometry ==========");
@@ -346,11 +368,12 @@ public class Test {
 	static void LargeRndPointTest() throws Exception {
 		System.out.println("========== QueryPoint：1万个伪随机点测试 ==========");
 		System.out.println("伪随机：虽然是随机生成的点，但每次运行生成坐标列表都是相同的。");
-		System.out.println("测试中，请耐心等待...");
-		{
+		for(int loop=0;loop<2;loop++) {
+			System.out.println((loop==0?"QueryPoint":"QueryPointWithTolerance")+"测试中，请耐心等待...");
+			
 			QueryResult res=new QueryResult();
-			double x_0=98.0,y_00=21.0;//矩形范围囊括大半个中国版图
-			double x_1=122.0,y_1=42.0;
+			double x_0=98.0,y_00=18.0;//矩形范围囊括大半个中国版图
+			double x_1=135.0,y_1=42.0;
 			int size=100;//1万点
 			double xStep=(x_1-x_0)/size;
 			double yStep=(y_1-y_00)/size;
@@ -360,7 +383,11 @@ public class Test {
 				while(y_0-y_1<-yStep/2) {
 					double y0=y_0, y1=y_0+yStep; y_0=y1;
 					
-					res=AreaCityQuery.QueryPoint(x0, y0, null, res);
+					if(loop==0) {
+						res=AreaCityQuery.QueryPoint(x0, y0, null, res);
+					}else {
+						res=AreaCityQuery.QueryPointWithTolerance(x0, y0, null, res, 2500);
+					}
 					res.Result.clear();//只保留统计
 				}
 			}
@@ -538,7 +565,10 @@ public class Test {
 		System.out.println("请输入一个坐标点，格式：\"lng lat\"（允许有逗号）：");
 		System.out.println("  - 比如：114.044346 22.691963，为广东省 深圳市 龙华区");
 		System.out.println("  - 比如：117.286491 30.450399，为安徽省 铜陵市 郊区，在池州市 贵池区的飞地");
+		System.out.println("  - 比如：121.993491 29.524288，为浙江省 宁波市 象山县，但坐标点位于海岸线外侧，不在任何边界内，需设置tolerance才能查出");
+		System.out.println("  - 输入 tolerance=2500 设置距离范围容差值，单位米，比如2500相当于一个以此坐标为中心点、半径为2.5km的圆形范围；默认0不设置，-1不限制距离；当坐标位于界线外侧（如海岸线、境界线）时QueryPoint方法将不会有边界图形能够匹配包含此坐标（就算距离只相差1cm），设置tolerance后，会查询出在这个范围内和此坐标点距离最近的边界数据");
 		System.out.println("  - 输入 exit 退出查询");
+		int tolerance=0;
 		while(true){
 			System.out.print("> ");
 			String inStr=ReadIn().trim();
@@ -550,6 +580,16 @@ public class Test {
 				System.out.println("bye! 已退出查询。");
 				System.out.println();
 				return;
+			}
+			if(inStr.startsWith("tolerance")) {
+				Matcher m=Pattern.compile("^tolerance[=\\s]+([+-]*\\d+)$").matcher(inStr);
+				if(!m.find()) {
+					System.out.println("tolerance设置格式错误，请重新输入");
+				}else {
+					tolerance=Integer.parseInt(m.group(1));
+					System.out.println("已设置tolerance="+tolerance);
+				}
+				continue;
 			}
 			String[] arr=inStr.split("[,\\s]+");
 			double lng=-999,lat=-999;
@@ -565,7 +605,13 @@ public class Test {
 				System.out.println("输入的坐标格式不正确");
 				continue;
 			}
-			QueryResult res=AreaCityQuery.QueryPoint(lng, lat, null, null);
+			QueryResult res;
+			if(tolerance==0) {
+				res=AreaCityQuery.QueryPoint(lng, lat, null, null);
+			}else {
+				System.out.println("QueryPointWithTolerance tolerance="+tolerance);
+				res=AreaCityQuery.QueryPointWithTolerance(lng, lat, null, null, tolerance);
+			}
 			System.out.println(res.toString());
 		}
 	}

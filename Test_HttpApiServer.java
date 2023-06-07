@@ -39,7 +39,7 @@ public class Test_HttpApiServer {
 	static public boolean Create(String bindIP, int bindPort) {
 		Desc="========== 本地轻量HTTP API服务 ==========";
 		Desc+="\n可通过 http://127.0.0.1:"+bindPort+" 访问本服务，提供的接口：";
-		Desc+="\n\n  - GET /queryPoint?lng=&lat=&returnWKTKey=      查询出包含此坐标点的所有边界图形的属性数据；lng必填经度，lat必填纬度，returnWKTKey可选要额外返回边界的wkt文本数据放到此key下。";
+		Desc+="\n\n  - GET /queryPoint?lng=&lat=&tolerance=&returnWKTKey=      查询出包含此坐标点的所有边界图形的属性数据；lng必填经度，lat必填纬度，returnWKTKey可选要额外返回边界的wkt文本数据放到此key下。tolerance可选，距离范围容差值，单位米，比如2500相当于一个以此坐标为中心点、半径为2.5km的圆形范围，-1不限制距离；当坐标位于界线外侧（如海岸线、境界线）时QueryPoint方法将不会有边界图形能够匹配包含此坐标（就算距离只相差1cm），传了此参数后，会查询出在这个范围内和此坐标点距离最近的边界数据，并且结果属性中会额外添加PointDistance（图形与坐标的距离，单位米）、PointDistanceID（图形唯一标识符）两个值。";
 		Desc+="\n\n  - GET /queryGeometry?wkt=&returnWKTKey=        查询出和此图形（点、线、面）有交点的所有边界图形的属性数据（包括边界相交）；wkt必填任意图形，returnWKTKey可选要额外返回边界的wkt文本数据放到此key下。";
 		Desc+="\n\n  - GET /readWKT?id=&pid=&deep=&extPath=&returnWKTKey= 读取边界图形的WKT文本数据；前四个参数可以组合查询或查一个参数（边界的属性中必须要有这些字段才能查询出来），id：查询指定id|unique_id的边界；pid：查询此pid下的所有边界；deep：限制只返回特定层级的数据，取值：0省1市2区想3乡镇；extPath：查询和ext_path完全相同值的边界，首尾支持*通配符（如：*武汉*）；returnWKTKey回边界的wkt文本数据放到此key下，默认值polygon_wkt，填0不返回wkt文本数据；注意：默认只允许输出最大20M的WKT数据，请参考下面的注意事项。";
 		Desc+="\n\n  - GET /debugReadGeometryGridSplitsWKT?id=&pid=&deep=&extPath=&returnWKTKey= Debug读取边界网格划分图形WKT文本数据；参数和/readWKT接口一致。";
@@ -85,6 +85,7 @@ public class Test_HttpApiServer {
 	static private void Req_queryPoint(HashMap<String, String> query, String[] response, String[] responseErr, int[] status, String[] contentType, HashMap<String, String> respHeader) throws Exception {
 		double lng=ToNum(query.get("lng"), 999);
 		double lat=ToNum(query.get("lat"), 999);
+		int tolerance=(int)ToLong(query.get("tolerance"), 0);
 		String returnWKTKey=query.get("returnWKTKey");
 		if(lng<-180 || lat<-90 || lng>180 || lat>90) {
 			responseErr[0]="坐标参数值无效";
@@ -95,7 +96,11 @@ public class Test_HttpApiServer {
 		if(returnWKTKey!=null && returnWKTKey.length()>0) {
 			res.Set_ReturnWKTKey=returnWKTKey;
 		}
-		AreaCityQuery.QueryPoint(lng, lat, null, res);
+		if(tolerance==0) {
+			AreaCityQuery.QueryPoint(lng, lat, null, res);
+		}else {
+			AreaCityQuery.QueryPointWithTolerance(lng, lat, null, res, tolerance);
+		}
 		
 		response[0]=ResToJSON(res);
 	}

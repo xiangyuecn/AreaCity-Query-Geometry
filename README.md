@@ -38,7 +38,7 @@ Test.java|可选|测试控制台程序，包含了所有功能的测试，包括
 
 ## 【QQ群】交流与支持
 
-欢迎加QQ群：①群 484560085、②群 626141661，纯小写口令：`areacity`
+欢迎加QQ群：①群 484560085、②群 626141661、③群 346847528，纯小写口令：`areacity`
 
 <img src="https://xiangyuecn.gitee.io/areacity-jsspider-statsgov/assets/qq_group_484560085.png" width="220px">
 
@@ -104,6 +104,8 @@ System.out.println(AreaCityQuery.GetInitInfo().toString()); //打印初始化详
 //查询包含一个坐标点的所有边界图形的属性数据，可通过res参数让查询额外返回wkt格式边界数据
 //查询结果的判定：请不要假定查询结果的数量（坐标刚好在边界上可能会查询出多个省市区），也不要假定查询结果顺序（结果中省市区顺序是乱序的），请检查判定res1.Result中的结果是否符合查询的城市级别，比如查询省市区三级：结果中必须且仅有3条数据，并且省市区都有（判断deep=0省|1市|2区 来区分数据的级别），其他一律判定为查询无效
 QueryResult res1=AreaCityQuery.QueryPoint(114.044346, 22.691963, null, null);
+//当坐标位于界线外侧（如海岸线、境界线）时QueryPoint方法将不会有边界图形能够匹配包含此坐标（就算距离只相差1cm），下面这个方法将能够匹配到附近不远的边界图形数据；2500相当于一个以此坐标为中心点、半径为2.5km的圆形范围，会查询出在这个范围内和此坐标点距离最近的边界
+QueryResult res1_2=AreaCityQuery.QueryPointWithTolerance(121.993491, 29.524288, null, null, 2500);
 
 //查询和一个图形（点、线、面）有交点的所有边界图形的属性数据，可通过res参数让查询额外返回wkt格式边界数据
 Geometry geom=new WKTReader(AreaCityQuery.Factory).read("LINESTRING(114.30115 30.57962, 117.254285 31.824198, 118.785633 32.064869)");
@@ -118,7 +120,7 @@ QueryResult res4=AreaCityQuery.ReadWKT_FromWkbsFile(null, null, (prop)->{
 }, null);
 
 
-System.out.println(res1+"\n"+res2+"\n"+res3+"\n"+res4);
+System.out.println(res1+"\n"+res1_2+"\n"+res2+"\n"+res3+"\n"+res4);
 //****更多的实例，请阅读 Test.java****
 //****更多功能方法，请阅读 AreaCityQuery.java 源码****
 ```

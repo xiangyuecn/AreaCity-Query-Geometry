@@ -13,13 +13,17 @@ import java.lang.management.OperatingSystemMXBean;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Envelope;
@@ -27,12 +31,14 @@ import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.LinearRing;
 import org.locationtech.jts.geom.MultiPolygon;
+import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.Polygon;
 import org.locationtech.jts.geom.PrecisionModel;
 import org.locationtech.jts.index.strtree.STRtree;
 import org.locationtech.jts.io.WKBReader;
 import org.locationtech.jts.io.WKBWriter;
 import org.locationtech.jts.io.WKTWriter;
+import org.locationtech.jts.operation.distance.DistanceOp;
 
 /**
  * 使用jts库从省市区县乡镇边界数据（AreaCity-JsSpider-StatsGov开源库）或geojson文件中查找出和任意点、线、面有相交的边界，内存占用低，性能优良。
@@ -66,6 +72,8 @@ public class AreaCityQuery {
 	 * <br>如果还未完成初始化，或者查询出错，都会抛异常。
 	 * <br>本方法线程安全。
 	 * 
+	 * <br><br>注意：如果此坐标位于界线外侧（如海岸线、境界线）时将不会有边界图形能够匹配包含（就算距离只相差1cm），此时如果你希望能匹配到附近不远的边界图形，请使用QueryPointWithTolerance方法
+	 * 
 	 * @param lng 进度坐标值
 	 * @param lat 纬度坐标值
 	 * @param where 可以为null，可选提供一个函数，筛选属性数据（此数据已经过初步筛选），会传入属性的json字符串，如果需要去精确计算这个边界图形是否匹配就返回true，否则返回false跳过这条边界图形的精确计算
@@ -75,6 +83,82 @@ public class AreaCityQuery {
 		CheckInitIsOK();
 		return QueryGeometry(Factory.createPoint(new Coordinate(lng, lat)), where, res);
 	}
+	/**
+	 * 先几何计算查询出包含此坐标点的所有边界图形的属性数据，此时和QueryPoint方法功能完全一致。
+	 * <br><br>当没有边界图形包含此坐标点时，会查询出和此坐标点距离最近的边界图形的属性数据，同一级别的边界图形只会返回距离最近的一条属性数据，比如：范围内匹配到多个市，只返回最近的一个市；级别的划分依据为属性中的deep值，deep值为空的为同的一级
+	 * ；结果属性中会额外添加PointDistance（图形与坐标的距离，单位米）、PointDistanceID（图形唯一标识符）两个值；由于多进行了一次范围查询，性能会比QueryPoint方法低些。
+	 * <br><br>本方法主要用途是解决：当坐标位于界线外侧（如海岸线、境界线）时QueryPoint方法将不会有边界图形能够匹配包含此坐标（就算距离只相差1cm），本方法将能够匹配到附近不远的边界图形数据。
+	 * 
+	 * <br><br>更多参数文档请参考QueryPoint方法，本方法线程安全。
+	 * 
+	 * @see #QueryPoint(double, double, Func, QueryResult)
+	 * @param toleranceMetre 距离范围容差值，单位米，比如取值2500，相当于一个以此坐标为中心点、半径为2.5km的圆形范围；当没有任何边界图形包含此坐标点时，会查询出与此坐标点的距离不超过此值 且 距离最近的边界图形属性数据；取值为0时不进行范围查找；取值为-1时不限制距离大小，会遍历所有数据导致性能极低
+	 */
+	static public QueryResult QueryPointWithTolerance(double lng, double lat, Func<String,Boolean> where, QueryResult res, int toleranceMetre) throws Exception {
+		CheckInitIsOK();
+		if(res!=null && res.Result==null) throw new Exception("不支持无Result调用");
+		
+		int resLen0=res==null?0:res.Result.size();
+		Point point=Factory.createPoint(new Coordinate(lng, lat));
+		QueryResult res1=QueryGeometry(point, where, res);
+		if(res1.Result.size()>resLen0 || toleranceMetre==0) {
+			return res1; //查找到了的就直接返回
+		}
+		
+		Geometry geom;
+		if(toleranceMetre>0) { //以点为中心，容差为半径，构造出一个圆，扩大到容差范围进行查找
+			geom=CreateSimpleCircle(lng, lat, toleranceMetre, 24);
+		} else { //不限制范围
+			geom=CreateRect(-180, -90, 180, 90);
+		}
+		HashMap<String, Double> propDists=new HashMap<>();
+		HashMap<String, Object[]> deepDists=new HashMap<>();
+		DecimalFormat df=new DecimalFormat("0.00");
+		res1.QueryCount--;
+		res1=QueryGeometryProcess(geom, where, res1, new Func<Object[], Boolean>(){
+			@Override
+			public Boolean Exec(Object[] args) throws Exception {
+				boolean add=false;
+				String prop=(String)args[0];
+				Geometry geom=(Geometry)args[1];
+				String lineNo=(String)args[2];
+				
+				Coordinate[] ps=DistanceOp.nearestPoints(geom, point);
+				double dist=Distance(ps[0].x, ps[0].y, ps[1].x, ps[1].y);
+				Double exists=propDists.get(lineNo);
+				if(exists==null || exists>dist) {//去重，相同一条数据只取距离最近的
+					Matcher m=Exp_OkGeoCsv_Deep.matcher(prop);
+					String deep=m.find()?m.group(1):"";
+					Object[] deepExists=deepDists.get(deep);
+					if(deepExists==null || (double)deepExists[0]>dist) {//去重，同一级别只取距离最近的
+						add=true;
+						propDists.put(lineNo, dist);
+						deepDists.put(deep, new Object[] { dist, lineNo });
+						prop=prop.substring(0, prop.length()-1)+", \"PointDistanceID\": "+lineNo+", \"PointDistance\": "+df.format(dist)+"}";
+						args[0]=prop;
+					}
+				}
+				return add;
+			}
+		});
+		//清理掉结果中多余的数据，每一级取一个，同一数据取最后一个
+		HashSet<String> ids=new HashSet<>(), exists=new HashSet<>();
+		for(Object[] o : deepDists.values()) ids.add((String)o[1]);
+		for(int i=res1.Result.size()-1;i>=resLen0;i--) {
+			String prop=res1.Result.get(i);
+			Matcher m=Exp_PointDistanceID.matcher(prop); m.find();
+			String lineNo=m.group(1);
+			if(!ids.contains(lineNo) || exists.contains(lineNo)) {
+				res1.Result.remove(i);
+			}else {
+				exists.add(lineNo);
+			}
+		}
+		return res1;
+	}
+	static private Pattern Exp_PointDistanceID=Pattern.compile("\"PointDistanceID[\\s\":]+(\\d+)");
+	static private Pattern Exp_OkGeoCsv_Deep=Pattern.compile("\"deep[\\s\":]+(\\d+)");
+	
 	
 	/**
 	 * 几何计算查询出和此图形（点、线、面）有交点的所有边界图形的属性数据（包括边界相交）。
@@ -88,6 +172,23 @@ public class AreaCityQuery {
 	 * @param res 可以为null，如果提供结果对象，可通过此对象的Set_XXX属性控制某些查询行为，比如设置Set_ReturnWKTKey可以额外返回边界的WKT文本数据；并且本次查询的结果和统计数据将累加到这个结果内（性能测试用）。注意：此结果对象非线程安全
 	 */
 	static public QueryResult QueryGeometry(Geometry geom, Func<String,Boolean> where, QueryResult res) throws Exception{
+		return QueryGeometryProcess(geom, where, res, null);
+	}
+	/**
+	 * 几何计算查询出和此图形（点、线、面）有交点的所有边界图形的属性数据（包括边界相交）。
+	 * <br>
+	 * <br>参数功能和QueryGeometry方法一致，多了一个process参数允许在匹配计算时进行自定义计算处理
+	 * <br>更多参数文档请参考QueryGeometry方法，本方法线程安全。
+	 * 
+	 * @see #QueryGeometry(Geometry, Func, QueryResult)
+	 * @param process 当一条数据经过精确匹配后，加入到结果中前，会调用此函数进行自定义计算，返回true继续加入到结果中，返回false丢弃这条数据；提供本函数后的查询性能会比不提供时低些，因为未去重增加了重复计算量。
+	 *            <br><br><b>注意：初始化时一个完整边界图形会在网格划分后产生多个小图形，匹配的每个小图形都会算作一条数据参与自定义计算，会导致结果数据重复，因此需要自行对结果数据进行去重</b>
+	 *            <br><br>参数为一个数组：
+	 *            <br>[0]String：可读写，当前数据属性的json字符串，修改后的json内容会放到结果中
+	 *            <br>[1]Geometry：当前数据的图形对象，用于计算，为网格划分后的小图形
+	 *            <br>[2]String：为当前数据对应的完整图形的唯一标识符，用于数据去重
+	 */
+	static public QueryResult QueryGeometryProcess(Geometry geom, Func<String,Boolean> where, QueryResult res, Func<Object[], Boolean> process) throws Exception{
 		CheckInitIsOK();
 		if(res==null) res=new QueryResult();
 		res.QueryCount++;
@@ -111,14 +212,14 @@ public class AreaCityQuery {
 			@SuppressWarnings("unchecked")
 			Map<String, Object> store=(Map<String, Object>)list.get(i);
 
-			byte[] wkbSub=null,wkbFull=null;
+			byte[] wkbSub=null;
 			String[] wkbPos=getWkbPos(store);
 			String lineNo=wkbPos[0];
 			int fullPos=Integer.parseInt(wkbPos[1]);
 			int subPos=Integer.parseInt(wkbPos[2]);
 			
 			//如果wkb对应的这条数据已经有一个sub匹配了，就不需要在继续查询
-			if(matchLines.indexOf(","+lineNo+",")!=-1) {
+			if(process==null && matchLines.indexOf(","+lineNo+",")!=-1) {//提供了process自定义处理，不去重
 				continue;
 			}
 			
@@ -142,9 +243,6 @@ public class AreaCityQuery {
 			} else {
 				wkbSub=ReadWkbFromFile(subPos);
 			}
-			if(returnWkt) {
-				wkbFull=ReadWkbFromFile(fullPos);
-			}
 			res.DurationN_IO+=System.nanoTime()-t_IO;
 			
 			//转换回图形
@@ -159,19 +257,39 @@ public class AreaCityQuery {
 			boolean isMatch=subGeom.intersects(geom);
 			res.DurationN_ExactHitQuery+=System.nanoTime()-t_Exact;
 			if(isMatch) {
-				matchLines+=lineNo+",";
-				
 				String prop=getProp(store);
-				if(returnWkt) { // 需要同时返回完整图形的wkt数据
-					Geometry fullGeom=new WKBReader(Factory).read(wkbFull);
-					String wkt=new WKTWriter().write(fullGeom);
-					prop=prop.substring(0, prop.length()-1)+", \""+res.Set_ReturnWKTKey+"\": \""+wkt+"\"}";
+				if(process!=null) { // 自定义计算
+					t_Exact=System.nanoTime();
+					Object[] args=new Object[] { prop, subGeom, lineNo };
+					if(!process.Exec(args)) {
+						isMatch=false;
+					} else {
+						prop=(String)args[0];
+					}
+					res.DurationN_ExactHitQuery+=System.nanoTime()-t_Exact;
 				}
 				
-				if(res.Result!=null) {
-					res.Result.add(prop);
+				if(isMatch) {
+					if(returnWkt) { // 需要同时返回完整图形的wkt数据
+						t_IO=System.nanoTime();
+						byte[] wkbFull=ReadWkbFromFile(fullPos);
+						res.DurationN_IO+=System.nanoTime()-t_IO;
+						
+						t_GeometryParse=System.nanoTime();
+						Geometry fullGeom=new WKBReader(Factory).read(wkbFull);
+						res.DurationN_GeometryParse+=System.nanoTime()-t_GeometryParse;
+						
+						String wkt=new WKTWriter().write(fullGeom);
+						prop=prop.substring(0, prop.length()-1)+", \""+res.Set_ReturnWKTKey+"\": \""+wkt+"\"}";
+					}
+					
+					if(res.Result!=null) {
+						res.Result.add(prop);
+					}
+					res.ExactHitCount++;
+					
+					matchLines+=lineNo+",";
 				}
-				res.ExactHitCount++;
 			}
 			
 			if(res.Set_EnvelopeHitResult!=null) {//将初步筛选的结果存入数组，如果要求了的话
@@ -1253,6 +1371,43 @@ public class AreaCityQuery {
 		}
 	}
 	
+	
+	/** 计算两个坐标的距离，单位米 **/
+	static public double Distance(double lng1, double lat1, double lng2, double lat2) {
+		//采用Haversine formula算法，高德地图的js计算代码，比较简洁 https://www.cnblogs.com/ggz19/p/7551088.html
+		double d=Math.PI/180;
+		double f=lat1*d, h=lat2*d;
+		double i=lng2*d - lng1*d;
+		double e=(1 - Math.cos(h - f) + (1 - Math.cos(i)) * Math.cos(f) * Math.cos(h)) / 2;
+		return 2 * 6378137 * Math.asin(Math.sqrt(e));
+	}
+	/** 以坐标点为中心，简单粗略的创建一个指定半径的圆，半径单位米，pointCount为构建圆的坐标点数（比如24个点，点越多越圆，最少3个点） **/
+	static public Geometry CreateSimpleCircle(double lng, double lat, double radius, int pointCount) {
+		//球面坐标不会算，转换成三角坐标简单点，经度代表值大约：0.01≈1km 0.1≈10km 1≈100km 10≈1000km
+		double km=radius/1000;
+		double a=km<5?0.01 :km<50?0.1 :km<500?1 :10;
+		double b=Distance(lng, lat, lng+a, lat);
+		double c=Distance(lng, lat, lng, lat+a);
+		double rb=radius/b*a;
+		double rc=radius/c*a;
+		Coordinate[] arr=new Coordinate[pointCount+1];
+		double n=0,step=360.0/pointCount,N=360-step/2; //注意浮点数±0.000000001的差异
+		for(int i=0;n<N;i++,n+=step){
+			double x=lng+rb*Math.cos(n*Math.PI/180);
+			double y=lat+rc*Math.sin(n*Math.PI/180);
+			arr[i]=new Coordinate(x, y);
+		}
+		arr[pointCount]=arr[0];
+		return Factory.createPolygon(arr);
+	}
+	/** 通过两个坐标点构造一个矩形 **/
+	static public Geometry CreateRect(double lng1, double lat1, double lng2, double lat2) {
+		return Factory.createPolygon(new Coordinate[] {
+			 new Coordinate(lng1, lat1), new Coordinate(lng1, lat2)
+			,new Coordinate(lng2, lat2), new Coordinate(lng2, lat1)
+			,new Coordinate(lng1, lat1)
+		});
+	}
 	
 	
 	
