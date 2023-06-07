@@ -307,6 +307,8 @@ public class Test_HttpApiServer {
 				URI url=context.getRequestURI();
 				String path=url.getPath(); if(path==null||path.length()==0)path="/";
 				String queryStr=url.getQuery(); if(queryStr==null) queryStr="";
+				String method=context.getRequestMethod(); if(method==null)method="";
+				method=method.toUpperCase();
 				
 				HashMap<String, String> query=new HashMap<>();
 				String[] queryArr=queryStr.split("&");
@@ -325,11 +327,14 @@ public class Test_HttpApiServer {
 				respHeader.put("Access-Control-Allow-Origin", "*");
 				
 				
-				boolean isApi=true;
+				boolean isApi=true, isHtml=false;
 				String[] response=new String[] { "" };
 				String[] responseErr=new String[] { "" };
 				try {
-					if(path.equals("/queryPoint")){
+					if(!method.equals("POST") && !method.equals("GET")) {
+						isApi=false; isHtml=true;
+						response[0]="Method: "+method;
+					} else if(path.equals("/queryPoint")){
 						Req_queryPoint(query, response, responseErr, status, contentType, respHeader);
 					} else if (path.equals("/queryGeometry")) {
 						Req_queryGeometry(query, response, responseErr, status, contentType, respHeader);
@@ -338,13 +343,11 @@ public class Test_HttpApiServer {
 					} else if (path.equals("/debugReadGeometryGridSplitsWKT")) {
 						Req_readWKT(true, query, response, responseErr, status, contentType, respHeader);
 					} else if (path.equals("/")) {
-						isApi=false;
-						contentType[0]="text/html; charset=utf-8";
+						isApi=false; isHtml=true;
 						response[0]="<h1>AreaCityQuery HttpApiServer Running!</h1>\n<pre style='word-break:break-all;white-space:pre-wrap'>"+Desc+"</pre>";
 					} else {
-						isApi=false;
+						isApi=false; isHtml=true;
 						status[0]=404;
-						contentType[0]="text/html; charset=utf-8";
 						response[0]="<h1>请求路径 "+path+" 不存在！</h1>";
 					}
 				} catch (Throwable e) {
@@ -363,6 +366,9 @@ public class Test_HttpApiServer {
 						response[0]="{\"c\":0,\"v\":"+response[0]+",\"m\":\"\"}";
 					}
 				}
+				if(isHtml) {
+					contentType[0]="text/html; charset=utf-8";
+				}
 				
 				respHeader.put("Content-Type", contentType[0]);
 				Headers header=context.getResponseHeaders();
@@ -378,7 +384,7 @@ public class Test_HttpApiServer {
 				StringBuilder log=new StringBuilder();
 				log.append("["+new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())+"]");
 				log.append(status[0]);
-				log.append(" "+context.getRequestMethod());
+				log.append(" "+method);
 				log.append(" "+path);
 				if(queryStr.length()>0) {
 					log.append("?"+queryStr);

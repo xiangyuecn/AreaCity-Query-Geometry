@@ -109,6 +109,7 @@ QueryResult res1_2=AreaCityQuery.QueryPointWithTolerance(121.993491, 29.524288, 
 
 //查询和一个图形（点、线、面）有交点的所有边界图形的属性数据，可通过res参数让查询额外返回wkt格式边界数据
 Geometry geom=new WKTReader(AreaCityQuery.Factory).read("LINESTRING(114.30115 30.57962, 117.254285 31.824198, 118.785633 32.064869)");
+//Geometry geom=AreaCityQuery.CreateSimpleCircle(114.044346, 22.691963, 10000, 24); //以指定坐标为中心点，创建一个半径为10km的圆面，圆面由24个坐标点粗略构成
 QueryResult res2=AreaCityQuery.QueryGeometry(geom, null, null);
 
 //读取省市区的边界数据wkt格式，这个例子会筛选出武汉市所有区县
