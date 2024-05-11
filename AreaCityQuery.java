@@ -21,7 +21,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -60,6 +59,12 @@ import org.locationtech.jts.operation.distance.DistanceOp;
  * <br>省市区县乡镇区划边界数据: https://github.com/xiangyuecn/AreaCity-JsSpider-StatsGov （github可换成gitee）
  */
 public class AreaCityQuery {
+	/** 默认提供的0-9的10个静态实例，每个实例可以分别使用一个数据文件进行初始化和查询，当然自己调用new AreaCityQuery()创建一个新实例使用也是一样的 */
+	static public final AreaCityQuery[] Instances=new AreaCityQuery[] {
+			new AreaCityQuery(),new AreaCityQuery(),new AreaCityQuery(),new AreaCityQuery(),new AreaCityQuery()
+			,new AreaCityQuery(),new AreaCityQuery(),new AreaCityQuery(),new AreaCityQuery(),new AreaCityQuery()
+		};
+	
 	/**
 	 * 几何计算查询出包含此坐标点的所有边界图形的属性数据（和此坐标点相交）：
 	 * <pre>
@@ -79,7 +84,7 @@ public class AreaCityQuery {
 	 * @param where 可以为null，可选提供一个函数，筛选属性数据（此数据已经过初步筛选），会传入属性的json字符串，如果需要去精确计算这个边界图形是否匹配就返回true，否则返回false跳过这条边界图形的精确计算
 	 * @param res 可以为null，如果提供结果对象，可通过此对象的Set_XXX属性控制某些查询行为，比如设置Set_ReturnWKTKey可以额外返回边界的WKT文本数据；并且本次查询的结果和统计数据将累加到这个结果内（性能测试用）。注意：此结果对象非线程安全
 	 */
-	static public QueryResult QueryPoint(double lng, double lat, Func<String,Boolean> where, QueryResult res) throws Exception{
+	public QueryResult QueryPoint(double lng, double lat, Func<String,Boolean> where, QueryResult res) throws Exception{
 		CheckInitIsOK();
 		return QueryGeometry(Factory.createPoint(new Coordinate(lng, lat)), where, res);
 	}
@@ -94,7 +99,7 @@ public class AreaCityQuery {
 	 * @see #QueryPoint(double, double, Func, QueryResult)
 	 * @param toleranceMetre 距离范围容差值，单位米，比如取值2500，相当于一个以此坐标为中心点、半径为2.5km的圆形范围；当没有任何边界图形包含此坐标点时，会查询出与此坐标点的距离不超过此值 且 距离最近的边界图形属性数据；取值为0时不进行范围查找；取值为-1时不限制距离大小，会遍历所有数据导致性能极低
 	 */
-	static public QueryResult QueryPointWithTolerance(double lng, double lat, Func<String,Boolean> where, QueryResult res, int toleranceMetre) throws Exception {
+	public QueryResult QueryPointWithTolerance(double lng, double lat, Func<String,Boolean> where, QueryResult res, int toleranceMetre) throws Exception {
 		CheckInitIsOK();
 		if(res!=null && res.Result==null) throw new Exception("不支持无Result调用");
 		
@@ -171,7 +176,7 @@ public class AreaCityQuery {
 	 * @param where 可以为null，可选提供一个函数，筛选属性数据（此数据已经过初步筛选），会传入属性的json字符串，如果需要去精确计算这个边界图形是否匹配就返回true，否则返回false跳过这条边界图形的精确计算
 	 * @param res 可以为null，如果提供结果对象，可通过此对象的Set_XXX属性控制某些查询行为，比如设置Set_ReturnWKTKey可以额外返回边界的WKT文本数据；并且本次查询的结果和统计数据将累加到这个结果内（性能测试用）。注意：此结果对象非线程安全
 	 */
-	static public QueryResult QueryGeometry(Geometry geom, Func<String,Boolean> where, QueryResult res) throws Exception{
+	public QueryResult QueryGeometry(Geometry geom, Func<String,Boolean> where, QueryResult res) throws Exception{
 		return QueryGeometryProcess(geom, where, res, null);
 	}
 	/**
@@ -188,7 +193,7 @@ public class AreaCityQuery {
 	 *            <br>[1]Geometry：当前数据的图形对象，用于计算，为网格划分后的小图形
 	 *            <br>[2]String：为当前数据对应的完整图形的唯一标识符，用于数据去重
 	 */
-	static public QueryResult QueryGeometryProcess(Geometry geom, Func<String,Boolean> where, QueryResult res, Func<Object[], Boolean> process) throws Exception{
+	public QueryResult QueryGeometryProcess(Geometry geom, Func<String,Boolean> where, QueryResult res, Func<Object[], Boolean> process) throws Exception{
 		CheckInitIsOK();
 		if(res==null) res=new QueryResult();
 		res.QueryCount++;
@@ -307,7 +312,7 @@ public class AreaCityQuery {
 	
 	/**
 	 * 遍历所有边界图形的属性列表查询出符合条件的属性，然后返回图形的属性+边界图形WKT文本。
-	 * <br>读取到的wkt文本，可以直接粘贴到页面内渲染显示：https://xiangyuecn.gitee.io/areacity-jsspider-statsgov/assets/geo-echarts.html
+	 * <br>读取到的wkt文本，可以直接粘贴到页面内渲染显示：https://xiangyuecn.github.io/AreaCity-JsSpider-StatsGov/assets/geo-echarts.html
 	 * <br>本方法可以用来遍历所有数据，提取感兴趣的属性内容（wktKey传null只返回属性），比如查询一个区划编号id对应的城市信息（城市名称、中心点）
 	 * 
 	 * <br>
@@ -320,7 +325,7 @@ public class AreaCityQuery {
 	 * @param where 必须提供一个函数，筛选属性数据（所有数据全过一遍），会传入属性的json字符串，如果需要匹配这个边界图形就返回true，否则返回false跳过这条边界图形
 	 * @param onFind 可选提供一个回调函数，每次查询到一条wkt数据后会通过onFind回传，String[]参数为[prop,wkt]；如果返回false数据将不会存入res结果中（也会忽略wktKey参数），需在回调中自行处理数据
 	 */
-	static public QueryResult ReadWKT_FromWkbsFile(String wktKey, QueryResult res, Func<String,Boolean> where, Func<String[], Boolean> onFind) throws Exception{
+	public QueryResult ReadWKT_FromWkbsFile(String wktKey, QueryResult res, Func<String,Boolean> where, Func<String[], Boolean> onFind) throws Exception{
 		CheckInitIsOK();
 		if(res==null) res=new QueryResult();
 		res.QueryCount++;
@@ -397,14 +402,14 @@ public class AreaCityQuery {
 	
 	/**
 	 * 调试用的，读取已在wkbs结构化文件中保存的网格划分图形WKT数据，用于核对网格划分情况。
-	 * <br>读取到的wkt文本，可以直接粘贴到页面内渲染显示：https://xiangyuecn.gitee.io/areacity-jsspider-statsgov/assets/geo-echarts.html
+	 * <br>读取到的wkt文本，可以直接粘贴到页面内渲染显示：https://xiangyuecn.github.io/AreaCity-JsSpider-StatsGov/assets/geo-echarts.html
 	 * 
 	 * @param wktKey 可以为null，比如填：wkt、polygon，作为json里的key: 存放wkt文本数据；如果传入空值，将只返回属性，不查询wkt文本数据；此参数会覆盖res.Set_ReturnWKTKey值
 	 * @param res 可以为null，如果提供结果对象，可通过此对象的Set_XXX属性控制某些查询行为，并且本次查询的结果和统计数据将累加到这个结果内（性能测试用）。注意：此结果对象非线程安全
 	 * @param where 必须提供一个函数，筛选属性数据（所有数据全过一遍），会传入属性的json字符串，如果需要匹配这个边界图形就返回true，否则返回false跳过这条边界图形
 	 * @param onFind 可选提供一个回调函数，每次查询到一条wkt数据后会通过onFind回传，String[]参数为[prop,wkt]；如果返回false数据将不会存入res结果中（也会忽略wktKey参数），需在回调中自行处理数据
 	 */
-	static public QueryResult Debug_ReadGeometryGridSplitsWKT(String wktKey, QueryResult res, Func<String,Boolean> where, Func<String[], Boolean> onFind) throws Exception {
+	public QueryResult Debug_ReadGeometryGridSplitsWKT(String wktKey, QueryResult res, Func<String,Boolean> where, Func<String[], Boolean> onFind) throws Exception {
 		CheckInitIsOK();
 		if(res==null) res=new QueryResult();
 		res.QueryCount++;
@@ -490,7 +495,7 @@ public class AreaCityQuery {
 	
 	
 	/**
-	 * 用加载数据到内存的模式进行初始化，边界图形数据存入内存中（内存占用和json数据文件大小差不多大，查询性能极高），本方法可以反复调用但只会初始化一次
+	 * 用加载数据到内存的模式进行初始化，边界图形数据存入内存中（内存占用和json数据文件大小差不多大，查询性能极高）；本方法可以反复调用但只会初始化一次，每次查询前都调用即可（查询会在初始化完成后进行）
 	 * <pre>
 	 * 支持文件(utf-8)：
 	 *  - *.wkbs saveWkbsFilePath生成的结构化数据文件，读取效率高。
@@ -499,17 +504,17 @@ public class AreaCityQuery {
 	 *                     ，最后一条数据的下一行必须是`]`打头
 	 *                     ，否则不支持解析，可尝试用文本编辑器批量替换添加换行符。
 	 * </pre>
-	 * 默认在内存中存储的是wkb格式数据（大幅减少内存占用），查询时会将wkb还原成图形对象，可通过设置 AreaCityQuery.SetInitStoreInMemoryUseObject=true 来关闭这一过程减少性能损耗，在内存中直接存储图形对象，但内存占用会增大一倍多。
+	 * 默认在内存中存储的是wkb格式数据（大幅减少内存占用），查询时会将wkb还原成图形对象，可通过设置 Instances[0-9].SetInitStoreInMemoryUseObject=true 来关闭这一过程减少性能损耗，在内存中直接存储图形对象，但内存占用会增大一倍多。
 	 * 
 	 * @param dataFilePath 数据文件路径（支持：*.wkbs、*.json），从这个文件读取数据；如果autoUseExistsWkbsFile=true并且saveWkbsFilePath文件存在时（已生成了结构化数据文件），可以不提供此参数
 	 * @param saveWkbsFilePath 可选提供一个.wkbs后缀的文件路径：dataFile是wkbs时不可以提供；dataFile是geojson时，加载geojson解析的数据会自动生成此结构化数据文件；如果和dataFile都不提供wkbs文件时查询中将不允许获取WKT数据
 	 * @param autoUseExistsWkbsFile 当传true时：如果检测到saveWkbsFilePath对应文件已成功生成过了，将直接使用这个wkbs文件作为dataFile（直接忽略dataFilePath参数）；建议传true，这样只需要首次加载生成了结构文件，以后读取数据都非常快（数据更新时需删除wkbs文件）
 	 */
-	static public void Init_StoreInMemory(String dataFilePath, String saveWkbsFilePath, boolean autoUseExistsWkbsFile) {
+	public void Init_StoreInMemory(String dataFilePath, String saveWkbsFilePath, boolean autoUseExistsWkbsFile) {
 		__Init(autoUseExistsWkbsFile, dataFilePath, saveWkbsFilePath, true);
 	}
 	/**
-	 * 用加载数据到结构化数据文件的模式进行初始化，推荐使用本方法初始化，边界图形数据存入结构化数据文件中，内存占用很低（查询时会反复读取文件对应内容，查询性能消耗主要在IO上，IO性能极高问题不大），本方法可以反复调用但只会初始化一次
+	 * 用加载数据到结构化数据文件的模式进行初始化，推荐使用本方法初始化，边界图形数据存入结构化数据文件中，内存占用很低（查询时会反复读取文件对应内容，查询性能消耗主要在IO上，IO性能极高问题不大）；本方法可以反复调用但只会初始化一次，每次查询前都调用即可（查询会在初始化完成后进行）
 	 * <pre>
 	 * 支持文件(utf-8)：
 	 *  - *.wkbs saveWkbsFilePath生成的结构化数据文件，读取效率高。
@@ -523,7 +528,7 @@ public class AreaCityQuery {
 	 * @param saveWkbsFilePath 不提供，或一个.wkbs后缀的文件路径：dataFile是wkbs时不可以提供；dataFile是geojson时，必须提供，加载geojson解析的数据会存入此文件
 	 * @param autoUseExistsWkbsFile 当传true时：如果检测到saveWkbsFilePath对应文件已成功生成过了，将直接使用这个wkbs文件作为dataFile（直接忽略dataFilePath参数）；建议传true，这样只需要首次加载生成了结构文件，以后读取数据都非常快（数据更新时需删除wkbs文件）
 	 */
-	static public void Init_StoreInWkbsFile(String dataFilePath, String saveWkbsFilePath, boolean autoUseExistsWkbsFile) {
+	public void Init_StoreInWkbsFile(String dataFilePath, String saveWkbsFilePath, boolean autoUseExistsWkbsFile) {
 		__Init(autoUseExistsWkbsFile, dataFilePath, saveWkbsFilePath, false);
 	}
 	
@@ -541,22 +546,22 @@ public class AreaCityQuery {
 	 * <br>取值越大，查询性能越低；初始化拆分出来的Polygon会越少，占用内存也会越少，解析json文件、或生成wkbs文件会比较快。
 	 * <br>如果不清楚作用，请勿调整此参数；修改后，之前生成的wkbs结构化文件均会失效，初始化时会重新生成。
 	 * **/
-	static public int SetGridFactor=100;
+	public int SetGridFactor=100;
 	
 	/** init时允许使用的最大线程数量，默认为不超过5 并且 不超过cpu核心数-1；线程数不要太多， 默认就好**/
-	static public int SetInitUseThreadMax=5;
+	public int SetInitUseThreadMax=5;
 	
 	/** init采用的Init_StoreInMemory时，图形数据直接存到内存，不要转成wkb压缩内存，可进一步提升性能，但会增大一倍多的内存占用 **/
-	static public boolean SetInitStoreInMemoryUseObject=false;
+	public boolean SetInitStoreInMemoryUseObject=false;
 	
 	/**
 	 * init状态：0未初始化，1初始化中，2初始化完成，3初始化失败（InitInfo.ErrMsg为错误消息）
 	 */
-	static public int GetInitStatus() {
+	public int GetInitStatus() {
 		return InitLock[0];
 	}
 	/** 检查init状态是否是2已初始化完成，未完成会抛出错误原因 **/
-	static public void CheckInitIsOK() throws Exception {
+	public void CheckInitIsOK() throws Exception {
 		if(InitLock[0]==3) {
 			throw new Exception(InitInfo.ErrMsg);
 		}
@@ -565,7 +570,7 @@ public class AreaCityQuery {
 		}
 	}
 	/** 将init状态设置为0（未初始化），允许重新Init **/
-	static public void ResetInitStatus() {
+	public void ResetInitStatus() {
 		synchronized (InitLock) {
 			InitLock[0] = 0;
 			EnvelopeSTRTree = null;
@@ -576,11 +581,11 @@ public class AreaCityQuery {
 	
 	
 	/** 是否是通过Init_StoreInMemory初始化的 **/
-	static public boolean IsStoreInMemory() {
+	public boolean IsStoreInMemory() {
 		return GetInitStatus()==2 && ReadFromMemory;
 	}
 	/** 是否是通过Init_StoreInWkbsFile初始化的 **/
-	static public boolean IsStoreInWkbsFile() {
+	public boolean IsStoreInWkbsFile() {
 		return GetInitStatus()==2 && !ReadFromMemory;
 	}
 	
@@ -592,14 +597,14 @@ public class AreaCityQuery {
 	 * </pre>
 	 * 此回调线程安全。
 	 */
-	static public Func<QueryInitInfo, Boolean> OnInitProgress;
+	public Func<QueryInitInfo, Boolean> OnInitProgress;
 	/**
 	 * init时的进度信息
 	 */
-	static public QueryInitInfo GetInitInfo() {
+	public QueryInitInfo GetInitInfo() {
 		return InitInfo;
 	}
-	static private QueryInitInfo InitInfo;
+	private QueryInitInfo InitInfo;
 	
 	
 	
@@ -607,16 +612,16 @@ public class AreaCityQuery {
 	
 	
 	/** jts的factory，可以用来创建Geometry **/
-	static public GeometryFactory Factory;
+	static public GeometryFactory Factory=new GeometryFactory(new PrecisionModel(), 4326);
 	
 	
-	static private int[] InitLock=new int[] { 0 };//0未初始化，1初始化中，2初始化完成，3初始化失败
-	static private boolean ReadFromMemory;
-	static private String WkbsFilePath;
-	static private STRtree EnvelopeSTRTree; //所有图形的外接矩形索引
-	static private List<HashMap<String,Object>> WKTDataStores; //WKT查询时需要读取的属性列表
-	static private HashMap<String, ArrayList<Integer>> LineSubsPos; //每行数据grid拆分后的数据在wkbs里面的存储位置
-	static private void __Init(boolean autoUseExistsWkbsFile, String dataFilePath, String saveWkbsFilePath, boolean readFromMemory) {
+	private int[] InitLock=new int[] { 0 };//0未初始化，1初始化中，2初始化完成，3初始化失败
+	private boolean ReadFromMemory;
+	private String WkbsFilePath;
+	private STRtree EnvelopeSTRTree; //所有图形的外接矩形索引
+	private List<HashMap<String,Object>> WKTDataStores; //WKT查询时需要读取的属性列表
+	private HashMap<String, ArrayList<Integer>> LineSubsPos; //每行数据grid拆分后的数据在wkbs里面的存储位置
+	private void __Init(boolean autoUseExistsWkbsFile, String dataFilePath, String saveWkbsFilePath, boolean readFromMemory) {
 		if(InitLock[0] >= 2) {
 			return;
 		}
@@ -630,8 +635,6 @@ public class AreaCityQuery {
 			
 			InitLock[0]=1;
 			try {
-				Factory=new GeometryFactory(new PrecisionModel(), 4326);
-				
 				InitInfo=new QueryInitInfo();
 				InitInfo.StartTimeN = System.nanoTime();
 				InitInfo.StartMemory_System = GetMemory_System();
@@ -666,8 +669,8 @@ public class AreaCityQuery {
 				}
 				InitInfo.DataFromWkbsFile=IsWkbsFilePath(dataFilePath);
 				InitInfo.HasWkbsFile=WkbsFilePath.length()>0;
-				InitInfo.OtherInfo.put("dataFilePath", dataFilePath);
-				InitInfo.OtherInfo.put("saveWkbsFilePath", saveWkbsFilePath);
+				InitInfo.FilePath_Data=dataFilePath;
+				InitInfo.FilePath_SaveWkbs=saveWkbsFilePath;
 				
 				//打开文件
 				fr=new FileInputStream(dataFilePath);
@@ -710,7 +713,7 @@ public class AreaCityQuery {
 			}
 		}
 	}
-	static private void __InitProcess(String dataFilePath, BufferedReader dataFile, String saveWkbsFilePath, FileOutputStream saveWkbsFile) throws Exception {
+	private void __InitProcess(String dataFilePath, BufferedReader dataFile, String saveWkbsFilePath, FileOutputStream saveWkbsFile) throws Exception {
 		Exception[] threadError=new Exception[] { null };
 		
 		STRtree rtree=new STRtree();
@@ -1077,11 +1080,11 @@ public class AreaCityQuery {
 	static private final String WKB_SP_Prop="|Prop:",WKB_SP_Pos="|Pos:",WKB_SP_WKB="|WKB:";
 	
 	
-	static private String getProp(Map<String,Object> store) {
+	private String getProp(Map<String,Object> store) {
 		return ((String[])store.get("prop"))[0];
 	}
 	/**从保存的数据中提取出位置信息**/
-	static private String[] getWkbPos(Map<String,Object> store) {
+	private String[] getWkbPos(Map<String,Object> store) {
 		String str=(String)store.get("wkbPos");
 		int p0=str.indexOf(':');
 		int p1=str.indexOf(':', p0+1);
@@ -1094,7 +1097,7 @@ public class AreaCityQuery {
 	/**
 	 * 检测结构化数据文件是否有效
 	 */
-	static private boolean AvailableWkbsFile(String path) {
+	private boolean AvailableWkbsFile(String path) {
 		File file=new File(path);
 		if(!file.exists())return false;
 		try(FileInputStream in=new FileInputStream(path)) {
@@ -1118,7 +1121,7 @@ public class AreaCityQuery {
 	/**
 	 * 从结构化数据文件中读取一条wkb数据
 	 */
-	static private byte[] ReadWkbFromFile(int pos) throws Exception {
+	private byte[] ReadWkbFromFile(int pos) throws Exception {
 		try(FileInputStream in=new FileInputStream(WkbsFilePath)) { // RandomAccessFile 没有区别，文件流无需缓存 新打开流不消耗性能，并发控制反而会影响性能
 			in.skip(pos);
 			ByteArrayOutputStream bs=new ByteArrayOutputStream();
@@ -1550,8 +1553,10 @@ public class AreaCityQuery {
 		/** 初始化结尾调用System.gc()回收内存的耗时，纳秒 **/
 		public long DurationN_JavaGC;
 		
-		/** 更多的执行信息字符串，标题：内容 **/
-		public HashMap<String, String> OtherInfo=new HashMap<String, String>();
+		/** 初始化时提供的数据文件路径 **/
+		public String FilePath_Data;
+		/** 初始化是提供的.wkbs后缀的结构化数据文件路径 **/
+		public String FilePath_SaveWkbs;
 		
 		/**初始化时的数据是否是从wkbs结构化数据文件中读取；如果为false可能代表还未生成过wkbs文件，首次初始化可能会很慢**/
 		public boolean DataFromWkbsFile;
@@ -1591,9 +1596,8 @@ public class AreaCityQuery {
 			str.append(", "+Memory(EndMemory_System - StartMemory_System)+" (系统)");
 			str.append(", Java GC耗时: "+Nano(DurationN_JavaGC));
 			
-			for(Entry<String, String> kv : OtherInfo.entrySet()) {
-				str.append("\n"+kv.getKey()+": "+kv.getValue());
-			}
+			str.append("\nData文件: "+FilePath_Data);
+			str.append("\nWkbs文件: "+FilePath_SaveWkbs);
 			
 			return str.toString();
 		}

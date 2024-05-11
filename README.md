@@ -1,4 +1,4 @@
-**【[源GitHub仓库](https://github.com/xiangyuecn/AreaCity-Query-Geometry)】 | 【[Gitee镜像库](https://gitee.com/xiangyuecn/AreaCity-Query-Geometry)】如果本文档图片没有显示，请手动切换到Gitee镜像库阅读文档。**
+**【[源GitHub仓库](https://github.com/xiangyuecn/AreaCity-Query-Geometry)】 | 【[Gitee镜像库](https://gitee.com/xiangyuecn/AreaCity-Query-Geometry)】**
 
 # :open_book:AreaCity-Query-Geometry坐标边界查询工具
 
@@ -17,7 +17,7 @@
 
 你可以只copy `AreaCityQuery.java` 文件到你的项目中使用（建好package目录或者修改一下package），项目中引入`jts库`，就能使用 `AreaCityQuery` 中的所有查找功能了。也可以clone整个项目代码双击 `编译和运行Test.java直接测试.bat` 即可直接运行测试（macOS、linux用终端运行`.sh`的）；`scripts`里面有生成jar包的命令行脚本。
 
-**API和图形界面**：本工具已自带了一个HTTP API服务，运行测试然后通过菜单启动此服务，然后就可以直接在浏览器上访问这些接口；此API接口可以直接在 [ECharts Map四级下钻在线测试和预览](https://xiangyuecn.gitee.io/areacity-jsspider-statsgov/assets/geo-echarts.html) 页面的`自定义数据源`中进行调用测试，页面会立即绘制查询出来的边界图形。
+**API和图形界面**：本工具已自带了一个HTTP API服务，运行测试然后通过菜单启动此服务，然后就可以直接在浏览器上访问这些接口；此API接口可以直接在 [ECharts Map四级下钻在线测试和预览](https://xiangyuecn.github.io/AreaCity-JsSpider-StatsGov/assets/geo-echarts.html) 页面的`自定义数据源`中进行调用测试，页面会立即绘制查询出来的边界图形。
 
 [​](?)
 
@@ -40,7 +40,7 @@ Test.java|可选|测试控制台程序，包含了所有功能的测试，包括
 
 欢迎加QQ群：①群 484560085、②群 626141661、③群 346847528，纯小写口令：`areacity`
 
-<img src="https://xiangyuecn.gitee.io/areacity-jsspider-statsgov/assets/qq_group_484560085.png" width="220px">
+<img src="https://gitee.com/xiangyuecn/AreaCity-JsSpider-StatsGov/raw/master/assets/qq_group_484560085.png" width="220px">
 
 
 
@@ -64,7 +64,7 @@ Test.java|可选|测试控制台程序，包含了所有功能的测试，包括
 2. 下载开源库里面的`AreaCity-Geo格式转换工具软件`；
 3. 打开转换工具软件，选择ok_geo.csv，然后导出成geojson文件即可（默认会导出全国的省级数据，通过填写不同城市名前缀可以导出不同城市）。
 
-> 如果你有多个小的geojson文件，需要合并成一个才行，可以通过上面下载的 `AreaCity-Geo格式转换工具软件` 中的 `高级功能`-`GeoJSON多个文件合并成一个文件` 来合并。
+> AreaCityQuery支持使用多个数据文件来分别创建多个查询实例，比如省、市、区分别导出一个geojson文件，需要查询哪个级别的数据就调用对应实例进行查询；但如果你有多个性质相同geojson文件时，也可以合并成一个文件来只创建一个查询实例使用，可以通过上面下载的 `AreaCity-Geo格式转换工具软件` 中的 `高级功能`-`GeoJSON多个文件合并成一个文件` 来合并。
 
 > 通过ok_geo.csv生成的geojson文件的坐标系默认是`GCJ-02`火星坐标系，查询时所有输入坐标参数的坐标系必须也是`GCJ-02`，否则坐标可能会有比较大的偏移，导致查询结果不正确；可以在转换工具的高级功能中使用坐标系转换，比如转成`WGS-84`GPS坐标系，重新导出geojson文件，这样查询时就能准确的查询GPS坐标了。
 
@@ -80,42 +80,48 @@ Test.java|可选|测试控制台程序，包含了所有功能的测试，包括
 1. 双击 `编译和运行Test.java直接测试.bat` 运行测试控制台程序（macOS、linux用终端运行`.sh`的）；
 2. 根据控制台菜单命令进行初始化（需先把一个geojson文件放本程序目录内，否则要输入路径）；
 3. 进入9号菜单，启动本地轻量HTTP API服务（编辑 Test.java 文件内的`HttpApiServerPort`可修改端口）；
-4. 浏览器访问：`http://127.0.0.1:9527/` 查看接口文档；
+4. 浏览器访问：`http://127.0.0.1:9527/` 查看接口文档和实例状态；
 5. 在需要的地方直接调用http地址接口，得到json响应结果；
 6. 如需外网访问，可以直接暴露端口，或使用Nginx之类的反代此http端口（通过Nginx提供https访问）。
 
-此HTTP API接口可以直接在 [ECharts Map四级下钻在线测试和预览](https://xiangyuecn.gitee.io/areacity-jsspider-statsgov/assets/geo-echarts.html) 页面的`自定义数据源`中进行调用测试，页面会立即绘制查询出来的边界图形。
+> 如需直接启动http服务，如服务器中：先解开Test.java中main函数对应的此功能注释，填写实际的json文件路径，然后运行即可；linux服务器中可使用 `nohup bash xxx.sh` 命令执行在后台运行。
+> 
+> 此HTTP API接口可以直接在 [ECharts Map四级下钻在线测试和预览](https://xiangyuecn.github.io/AreaCity-JsSpider-StatsGov/assets/geo-echarts.html) 页面的`自定义数据源`中进行调用测试，页面会立即绘制查询出来的边界图形。
 
 
 [​](?)
 
 ### 使用方式二：Java直接调用
 ``` java
-//先初始化，全局只会初始化一次，每次查询前都调用即可（查询会在初始化完成后进行），两种初始化方式根据自己业务情况二选一
+//先获取到查询实例，默认提供的0-9的10个静态实例，每个实例可以分别使用一个数据文件进行初始化和查询，当然自己调用new AreaCityQuery()创建一个新实例使用也是一样的
+AreaCityQuery Instance=AreaCityQuery.Instances[0];
+//static public final AreaCityQuery Instance=new AreaCityQuery(); //也可以自己创建静态实例
+
+//查询前先初始化，每个实例全局只会初始化一次，每次查询前都调用即可（查询会在初始化完成后进行），两种初始化方式根据自己业务情况二选一
 //首次初始化会从.json或.geojson文件中读取边界图形数据，速度比较慢，会自动生成.wkbs结尾的结构化文件，下次初始化就很快了
 //首次初始化生成了.wkbs文件后，后续初始化可以只使用此wkbs文件，允许不用再提供geojson文件（数据更新时需删除wkbs文件再重新用geojson文件进行初始化），具体请阅读对应初始化方法的注释文档
-AreaCityQuery.Init_StoreInWkbsFile("geojson文件路径", "geojson文件路径.wkbs", true);
-//AreaCityQuery.Init_StoreInMemory("geojson文件路径", "geojson文件路径.wkbs", true);
+Instance.Init_StoreInWkbsFile("geojson文件路径", "geojson文件路径.wkbs", true);
+//Instance.Init_StoreInMemory("geojson文件路径", "geojson文件路径.wkbs", true);
 
-//AreaCityQuery.OnInitProgress=(initInfo)->{ ... } //初始化过程中的回调，可以绑定一个函数，接收初始化进度信息（编写时需在Init之前进行绑定）
-System.out.println(AreaCityQuery.GetInitInfo().toString()); //打印初始化详细信息，包括性能信息
+//Instance.OnInitProgress=(initInfo)->{ ... } //初始化过程中的回调，可以绑定一个函数，接收初始化进度信息（编写时需在Init之前进行绑定）
+System.out.println(Instance.GetInitInfo().toString()); //打印初始化详细信息，包括性能信息
 
 //注意：以下查询中所有坐标参数的坐标系必须和初始化时使用的geojson数据的坐标系一致，否则坐标可能会有比较大的偏移，导致查询结果不正确
 //查询包含一个坐标点的所有边界图形的属性数据，可通过res参数让查询额外返回wkt格式边界数据
 //查询结果的判定：请不要假定查询结果的数量（坐标刚好在边界上可能会查询出多个省市区），也不要假定查询结果顺序（结果中省市区顺序是乱序的），请检查判定res1.Result中的结果是否符合查询的城市级别，比如查询省市区三级：结果中必须且仅有3条数据，并且省市区都有（判断deep=0省|1市|2区 来区分数据的级别），其他一律判定为查询无效
-QueryResult res1=AreaCityQuery.QueryPoint(114.044346, 22.691963, null, null);
+QueryResult res1=Instance.QueryPoint(114.044346, 22.691963, null, null);
 //当坐标位于界线外侧（如海岸线、境界线）时QueryPoint方法将不会有边界图形能够匹配包含此坐标（就算距离只相差1cm），下面这个方法将能够匹配到附近不远的边界图形数据；2500相当于一个以此坐标为中心点、半径为2.5km的圆形范围，会查询出在这个范围内和此坐标点距离最近的边界
-QueryResult res1_2=AreaCityQuery.QueryPointWithTolerance(121.993491, 29.524288, null, null, 2500);
+QueryResult res1_2=Instance.QueryPointWithTolerance(121.993491, 29.524288, null, null, 2500);
 
 //查询和一个图形（点、线、面）有交点的所有边界图形的属性数据，可通过res参数让查询额外返回wkt格式边界数据
 Geometry geom=new WKTReader(AreaCityQuery.Factory).read("LINESTRING(114.30115 30.57962, 117.254285 31.824198, 118.785633 32.064869)");
 //Geometry geom=AreaCityQuery.CreateSimpleCircle(114.044346, 22.691963, 10000, 24); //以指定坐标为中心点，创建一个半径为10km的圆面，圆面由24个坐标点粗略构成
-QueryResult res2=AreaCityQuery.QueryGeometry(geom, null, null);
+QueryResult res2=Instance.QueryGeometry(geom, null, null);
 
 //读取省市区的边界数据wkt格式，这个例子会筛选出武汉市所有区县
-QueryResult res3=AreaCityQuery.ReadWKT_FromWkbsFile("wkt_polygon", null, (prop)->{return prop.contains("武汉市 ");}, null);
+QueryResult res3=Instance.ReadWKT_FromWkbsFile("wkt_polygon", null, (prop)->{return prop.contains("武汉市 ");}, null);
 //此方法会遍历所有边界图形的属性列表，因此可以用来遍历所有数据，提取感兴趣的属性内容，比如查询一个区划编号id对应的城市信息（城市名称、中心点）
-QueryResult res4=AreaCityQuery.ReadWKT_FromWkbsFile(null, null, (prop)->{
+QueryResult res4=Instance.ReadWKT_FromWkbsFile(null, null, (prop)->{
     prop=(","+prop.substring(1, prop.length()-1)+",").replace("\"", "").replace(" ", ""); //不解析json，简单处理
     return prop.contains(",id:42,"); //只查询出id=42（湖北省）的属性数据（注意初始化的geojson中必须要有对应的属性名，这里是id）
 }, null);
@@ -129,13 +135,6 @@ System.out.println(res1+"\n"+res1_2+"\n"+res2+"\n"+res3+"\n"+res4);
 ### 附：生成jar包
 `scripts`目录里面有生成jar包的命令行脚本，双击`生成jar包.bat`即可将源码编译成jar文件（macOS、linux用终端运行`.sh`的）；脚本支持生成`带Test.java控制台程序`的、和`不带控制台程序`的两种jar，前者可以启动运行，后者可放到其他项目中用Java代码调用。
 
-### 附：Java调用时如何同时开启多个实例
-同一个Java进程内，一个`AreaCityQuery`类只能初始化成一个实例（多开多个Java进程本身就是多个实例，无需特别处理）。
-
-如果你想要同时使用多个不同的geojson文件进行初始化，只需要提供多个`AreaCityQuery`类，即可同时开启多个实例，**有两种方法：**
-- 使用多个不同包名：包内直接copy `AreaCityQuery.java`进去改好包名，比如：`com.aa.AreaCityQuery`、`com.bb.AreaCityQuery`，这样就可以用不同包下面的`AreaCityQuery`类分别进行初始化，多个实例互不干扰。
-- 使用多个不同类名：同一个包下，将`AreaCityQuery.java`改名成不同的类，比如：`com.aa.AreaCityQuery1`、`com.aa.AreaCityQuery2`，这样就可以通过`AreaCityQuery1`、`AreaCityQuery2`类分别进行初始化，多个实例互不干扰。
-
 ### 附：关于Java程序打包发布
 本程序只支持从文件路径进行初始化，所以请将数据文件放到一个磁盘目录内，不要打包进jar中；如果是docker发布，可以在dockerfile中用VOLUME映射宿主机目录、或直接将数据文件copy进docker镜像内的目录中。
 
@@ -143,7 +142,7 @@ System.out.println(res1+"\n"+res1_2+"\n"+res2+"\n"+res3+"\n"+res4);
 [​](?)
 
 ### 附：查询一个坐标对应城市的结果判定
-比如查询省市区三级，查询结果在`res.Result`中：
+省、市、区分成三个geojson文件分别初始化三个查询实例进行查询的结果判断会简单一些；如果省市区三级数据在一个geojson文件中初始化的查询实例，查询结果`res.Result`可通过下面规则进行判断：
 - 请不要假定查询结果的数量，比如：坐标刚好在边界上可能会查询出多个省市区，结果中将超过3条数据；
 - 请不要假定查询结果顺序，结果中省市区顺序是乱序的，需要判断每条结果是省市区哪一级，通过判断结果中的`deep=0省|1市|2区`来区分这条结果是哪个级别；
 - 请检查判定查询结果中的数据是否完全符合查询的城市级别：省市区三级结果中必须且仅有3条数据，并且这3条数据省市区三级都有，否则一律可判定为查询无效。
@@ -198,7 +197,7 @@ System.out.println(res1+"\n"+res1_2+"\n"+res2+"\n"+res3+"\n"+res4);
 仅区级|107MB|3208条|96MB|121228|17318|0.058ms
 仅省级|20MB|34条|18MB|465940|66562|0.015ms
 
-> `Init_StoreInMemory`：用加载数据到内存的模式进行初始化，边界图形数据存入内存中，内存占用和json数据文件大小差不多大，查询性能极高；另外可通过设置 `AreaCityQuery.SetInitStoreInMemoryUseObject=true` 来进一步提升性能，但内存占用会增大一倍多，省市区三级单核可达到 15000 QPS。
+> `Init_StoreInMemory`：用加载数据到内存的模式进行初始化，边界图形数据存入内存中，内存占用和json数据文件大小差不多大，查询性能极高；另外可通过设置 `Instances[0-9].SetInitStoreInMemoryUseObject=true` 来进一步提升性能，但内存占用会增大一倍多，省市区三级单核可达到 15000 QPS。
 
 
 [​](?)
@@ -290,7 +289,7 @@ jts库内部已自带了STRtree，目前已用于加速envelope的查找，进�
 
 因此只要减少边界图形的坐标点，查询性能就会提升，极端的就是4个坐标点，查询性能最高；我们就可以将大的边界图形切割成很小的图形，并且尽量使图形内部大面积的切成矩形（4个坐标点），查询性能就得到很大的提升；`AreaCityQuery`内的`GeometryGridSplit`方法就是按照这个原则对边界图形进行切割拆分的。
 
-用`AreaCityQuery.Debug_ReadGeometryGridSplitsWKT`方法、或测试控制台内菜单`查询: Debug 读取边界网格划分图形WKT文本数据`来导出拆分后的图形WKT数据，然后可以直接粘贴到《[ECharts Map四级下钻在线测试和预览+代码生成](https://xiangyuecn.gitee.io/areacity-jsspider-statsgov/assets/geo-echarts.html)》页面内渲染显示；比如内蒙的边界图形切割后的样子：
+用`Debug_ReadGeometryGridSplitsWKT`方法、或测试控制台内菜单`查询: Debug 读取边界网格划分图形WKT文本数据`来导出拆分后的图形WKT数据，然后可以直接粘贴到《[ECharts Map四级下钻在线测试和预览+代码生成](https://xiangyuecn.github.io/AreaCity-JsSpider-StatsGov/assets/geo-echarts.html)》页面内渲染显示；比如内蒙的边界图形切割后的样子：
 
 ![HTTP API调用查询](images/use-debug-grid-split.png)
 
@@ -322,4 +321,4 @@ WKB二进制数据放内存里面始终要占用内存，因此把Geometry对象
 
 您也可以使用支付宝或微信打赏作者：
 
-![](https://xiangyuecn.gitee.io/recorder/assets/donate-alipay.png)  ![](https://xiangyuecn.gitee.io/recorder/assets/donate-weixin.png)
+![](https://gitee.com/xiangyuecn/Recorder/raw/master/assets/donate-alipay.png)  ![](https://gitee.com/xiangyuecn/Recorder/raw/master/assets/donate-weixin.png)
