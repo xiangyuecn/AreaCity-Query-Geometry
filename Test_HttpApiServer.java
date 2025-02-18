@@ -37,6 +37,8 @@ import com.sun.net.httpserver.HttpServer;
 public class Test_HttpApiServer {
 	/** 是否允许输出大量WKT数据，默认不允许，只能输出最大20M的数据；如果要设为true，请确保没有 -Xmx300m 限制Java使用小内存 **/
 	static public boolean AllowResponseBigWKT=false;
+	/** 套接字积压：已连上但服务器还未来得及accept的socket排队队列容量。如果此值小于或等于零，则使用系统默认值。用JMeter 200个线程测试能达到1900QPS，这个如果使用很小的值或系统默认值，服务器会拒绝部分连接，调大就正常了，但如果300个线程测试依旧会出现连接错误 **/
+	static public int SocketBacklog=1000;
 	
 	static private String Desc;
 	static public boolean Create(String bindIP, int bindPort) {
@@ -447,7 +449,7 @@ public class Test_HttpApiServer {
 		};
 		
 		// https://www.apiref.com/java11-zh/jdk.httpserver/com/sun/net/httpserver/HttpServer.html
-		httpServer = HttpServer.create(new InetSocketAddress(bindIP, bindPort), 0);
+		httpServer = HttpServer.create(new InetSocketAddress(bindIP, bindPort), SocketBacklog);
 		httpServer.createContext("/", new HttpHandler() {
 			@Override
 			public void handle(HttpExchange context) throws IOException {

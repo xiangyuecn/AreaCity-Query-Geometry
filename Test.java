@@ -28,18 +28,18 @@ public class Test {
 		//【请在这里编写你自己的测试代码】
 		
 		
-/***【运行时直接启动http api服务】	可解开这个注释即可生效
+/***【运行时直接启动http api服务】	这行开头加个/即可解开这个注释，代码即生效，下面填写实际的json文件路径
 		// 比如在服务器里面用，使用这段代码不会显示命令行菜单，会直接启动http服务；linux服务器中可使用 `nohup bash xxx.sh` 命令执行后台运行
 		Init_FromFile(0, true, "D:/xxx/ok_geo.json"); //支持使用.json、.geojson、.wkbs文件进行初始化
 		//Init_FromFile(1, true, "D:/xxx/xx1.json"); //允许使用不同的数据文件初始化多个静态实例，api接口可以调用不同实例进行查询
 		//Init_FromFile(2, true, "D:/xxx/xx2.json"); 
 		StartHttpApiServer(HttpApiServerPort); //直接启动http api服务，可指定端口
 		if(true)return;
-***/
+// ***/
 		
 		
 		
-/***【基础调用示例代码】	可解开这个注释即可生效
+/***【基础调用示例代码】	这行开头加个/即可解开这个注释，代码即生效
 		String jsonFile="仅供测试-全国省级GeoJSON数据-大幅简化粗略版.json";
 		//先获取到查询实例，默认提供的0-9的10个静态实例，每个实例可以分别使用一个数据文件进行初始化和查询，当然自己调用new AreaCityQuery()创建一个新实例使用也是一样的
 		AreaCityQuery Instance=AreaCityQuery.Instances[0];
@@ -77,7 +77,7 @@ public class Test {
 
 		System.out.println(res1+"\n"+res1_2+"\n"+res2+"\n"+res3+"\n"+res4);
 		if(true)return;
-*****/
+// ***/
 		
 		
 		Start(args);
