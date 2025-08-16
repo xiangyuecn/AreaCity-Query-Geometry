@@ -38,9 +38,9 @@ Test.java|可选|测试控制台程序，包含了所有功能的测试，包括
 
 ## 【QQ群】交流与支持
 
-欢迎加QQ群：①群 484560085、②群 626141661、③群 346847528，纯小写口令：`areacity`
+欢迎加QQ群：①群 `484560085(满)`、②群 `626141661(满)`、③群 `346847528(满)`、④群 `514420754`，纯小写口令：`areacity`
 
-<img src="https://gitee.com/xiangyuecn/AreaCity-JsSpider-StatsGov/raw/master/assets/qq_group_484560085.png" width="220px">
+<img src="https://github.com/xiangyuecn/AreaCity-JsSpider-StatsGov/raw/master/assets/qq_group_484560085.png" width="220px">
 
 
 
@@ -61,16 +61,16 @@ Test.java|可选|测试控制台程序，包含了所有功能的测试，包括
 ### 前期准备：生成GeoJSON文件
 程序初始化时，需要提供一个geojson文件（.json|.geojson），如果你没有此文件，可以按以下步骤获得最新的全国省市区县乡镇边界数据json文件：
 1. 请到开源库下载省市区边界数据ok_geo.csv文件: https://github.com/xiangyuecn/AreaCity-JsSpider-StatsGov （github可换成gitee）；
-2. 下载开源库里面的`AreaCity-Geo格式转换工具软件`；
+2. 下载开源库里面的[AreaCity-Geo格式转换工具软件](https://xiangyuecn.github.io/AreaCity-JsSpider-StatsGov/assets/AreaCity-Geo-Transform-Tools.html)（工具的高级中`文件格式批量互转`功能支持将shp kml gpkg等文件转成geojson）；
 3. 打开转换工具软件，选择ok_geo.csv，然后导出成geojson文件即可（默认会导出全国的省级数据，通过填写不同城市名前缀可以导出不同城市）。
 
 > AreaCityQuery支持使用多个数据文件来分别创建多个查询实例，比如省、市、区分别导出一个geojson文件，需要查询哪个级别的数据就调用对应实例进行查询；但如果你有多个性质相同geojson文件时，也可以合并成一个文件来只创建一个查询实例使用，可以通过上面下载的 `AreaCity-Geo格式转换工具软件` 中的 `高级功能`-`GeoJSON多个文件合并成一个文件` 来合并。
 
 > 通过ok_geo.csv生成的geojson文件的坐标系默认是`GCJ-02`火星坐标系，查询时所有输入坐标参数的坐标系必须也是`GCJ-02`，否则坐标可能会有比较大的偏移，导致查询结果不正确；可以在转换工具的高级功能中使用坐标系转换，比如转成`WGS-84`GPS坐标系，重新导出geojson文件，这样查询时就能准确的查询GPS坐标了。
 
-> 源码内已提供了一个 `仅供测试-全国省级GeoJSON数据-大幅简化粗略版.json` 文件（为了大幅减小文件体积，已严重精简过了，不可在其它地方使用），可以直接使用此文件测试，但只能测试到省级边界，如需正式测试或使用，请参考上面方法自行生成geojson文件。
+> 源码内已提供了一个 `仅供测试-全国省级GeoJSON数据-大幅简化粗略版.json` 文件（为了大幅减小文件体积，已严重精简过了，不可在其它地方使用），可以直接使用此文件测试，但只能测试到省级边界，如需正式测试或使用，请参考上面方法自行生成geojson文件；另提供了一个 `仅供测试-世界七大洲GeoJSON数据-大幅简化粗略版.json` 文件，可直接测试全球。
 > 
-> 注意：如果是其他地方生成的geojson文件， 要求里面数据**必须是一行一条数据**，第一条数据的上一行必须是`"features": [`，最后一条数据的下一行必须是`]`打头，**否则不支持解析**，可尝试用文本编辑器批量替换添加换行符，改成和 `仅供测试-全国省级GeoJSON数据-大幅简化粗略版.json` 一样内容格式就行。
+> 注意：如果是其他地方生成的geojson文件， 要求里面数据**必须是一行一条数据**，第一条数据的上一行必须是`"features": [`，最后一条数据的下一行必须是`]`打头，**否则不支持解析**，可尝试用文本编辑器批量替换添加换行符，改成和 `仅供测试-全国省级GeoJSON数据-大幅简化粗略版.json` 一样内容格式就行；或直接用上面下载的 `AreaCity-Geo格式转换工具软件` 中的 `高级功能`-`文件格式批量互转`，将geojson重新转成geojson即可，简单方便。
 
 
 [​](?)
@@ -321,4 +321,4 @@ WKB二进制数据放内存里面始终要占用内存，因此把Geometry对象
 
 您也可以使用支付宝或微信打赏作者：
 
-![](https://gitee.com/xiangyuecn/Recorder/raw/master/assets/donate-alipay.png)  ![](https://gitee.com/xiangyuecn/Recorder/raw/master/assets/donate-weixin.png)
+![](https://github.com/xiangyuecn/Recorder/raw/master/assets/donate-alipay.png)  ![](https://github.com/xiangyuecn/Recorder/raw/master/assets/donate-weixin.png)
